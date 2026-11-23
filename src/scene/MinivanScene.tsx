@@ -34,7 +34,7 @@ export function MinivanScene() {
       <EnvironmentRig />
       <CameraRig />
 
-      {/* Serena-style Minivan Assembly */}
+      {/* Minivan Assembly */}
       <group>
         <MinivanBody />
         <MinivanInterior />

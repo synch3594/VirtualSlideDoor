@@ -45,7 +45,7 @@ interface SmartKeyFobProps {
 }
 
 /**
- * Nissan Serena Intelligent Key inspired smartphone tactile remote fob.
+ * Smart Key inspired smartphone tactile remote fob.
  * Supports both bottom horizontal layout (portrait/tablet) and compact right-rail layout (phone landscape).
  */
 export function SmartKeyFob({ layout = 'horizontal' }: SmartKeyFobProps) {
@@ -102,7 +102,7 @@ export function SmartKeyFob({ layout = 'horizontal' }: SmartKeyFobProps) {
   if (layout === 'side') {
     return (
       <div className="flex flex-col gap-1.5 w-full h-full">
-        {/* Sculpted Intelligent Key Shell: Big Slide-Door Button */}
+        {/* Sculpted Smart Key Shell: Big Slide-Door Button */}
         <button
           type="button"
           onClick={() => triggerDoorToggle('smart_key')}
@@ -166,7 +166,7 @@ export function SmartKeyFob({ layout = 'horizontal' }: SmartKeyFobProps) {
 
   return (
     <div className="flex items-center justify-center gap-2.5 w-full max-w-md mx-auto">
-      {/* Sculpted Nissan Intelligent Key Fob Shell */}
+      {/* Sculpted Smart Key Fob Shell */}
       <div className="flex-1 flex items-center gap-2 bg-gradient-to-b from-slate-800 via-slate-900 to-black border border-slate-600/70 rounded-3xl p-2 shadow-[0_10px_28px_rgba(0,0,0,0.65),inset_0_1px_1px_rgba(255,255,255,0.18)]">
         {/* Lock / Unlock Vertical Stack */}
         <div className="flex flex-col gap-1.5">

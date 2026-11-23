@@ -1,6 +1,6 @@
 # リアル スライドドア（Virtual Slide Door）
 
-ミニバン（日産 セレナ系テイスト）のパワースライドドアを**ただ開け閉めするだけ**を、現実に忠実に楽しめる3D Webアプリです。  
+ミニバンのパワースライドドアを**ただ開け閉めするだけ**を、現実に忠実に楽しめる3D Webアプリです。  
 スライドドアが大好きな子どもがスマートフォンで直感的に遊べるよう、物理軌道・機構・音・光・操作スイッチのリアルさを追求しています。
 
 詳細な要件・設計方針については [DESIGN.md](./DESIGN.md) を参照してください。
@@ -15,7 +15,7 @@
 - **Web Audio API によるリアルタイム音響合成**
   - 警告ブザー（開始「ピピッ」／閉動作「ピッ・ピッ…」／挟み込み反転「ピーッピーッピーッ！」／アンサーバック）。
   - ドア速度に応じてピッチが変化するDCモーター駆動音・レール走行音、ラッチ解除音、高トルクのイージークローザー音、ハザードリレー音。
-  - ブザー音色は「セレナ風 電子ブザー」「やわらかチャイム」の2種類を切替可能。
+  - ブザー音色は「標準 電子ブザー」「やわらかチャイム」の2種類を切替可能。
 - **実車さながらの多彩な操作インターフェース**
   - **車体への直接タッチ**: アウタークロームハンドル＆ワンタッチ黒スイッチ、足元キックセンサー、車内Bピラーボタン・インナーハンドル、閉動作中のドア前端エッジ（挟み込み検知）。
   - **スマートキーUI**: 施錠／解錠（ハザード・アンサーバック連動）、大型開閉ボタン＋赤色LED、足キックセンサーボタン。
@@ -80,15 +80,12 @@ npm run preview
 
 ## GitHub Pages へのデプロイ（`gh-pages` ブランチ）
 
-同一リポジトリ内の専用ブランチ **`gh-pages`** に、ローカルからビルド成果物（`dist/`）をデプロイして公開する構成になっています。
+`main` ブランチへ push すると、GitHub Actions（[`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml)）が自動実行され、本番ビルド成果物（`dist/`）を **`gh-pages`** ブランチへデプロイします（Actions タブからの手動実行 `workflow_dispatch` にも対応）。
 
 ### 公開までの手順（初回セットアップ）
 
-1. **ローカルから `gh-pages` ブランチへデプロイする**
-   ```bash
-   npm run deploy
-   ```
-   - 本番ビルド（`dist/` 生成・`.nojekyll` 付与）を実行し、`origin` の `gh-pages` ブランチへプッシュします。
+1. **`main` ブランチへ push する**
+   - GitHub Actions ワークフロー **Deploy to GitHub Pages** が自動で走り、`gh-pages` ブランチにビルド成果物（`.nojekyll` 付き）がプッシュされます。
 2. **GitHub Pages の公開ブランチを設定する（初回のみ）**
    - リポジトリの **Settings → Pages** を開く
    - **Build and deployment → Source** で **Deploy from a branch** を選択
@@ -99,13 +96,15 @@ npm run preview
 
 ### 2回目以降の更新方法
 
-更新したいタイミングで以下のコマンドを実行するだけで、`gh-pages` ブランチが最新版に更新されます。
+`main` ブランチへ変更を push するだけで、自動的に `gh-pages` ブランチが最新版に更新されます。
+
+ローカルから直接 `gh-pages` ブランチへ手動デプロイしたい場合は、引き続き以下のコマンドも利用できます。
 
 ```bash
 npm run deploy
 ```
 
-> **補足**: リポジトリ名を変更した場合は `vite.config.ts` のデフォルト `base` または環境変数 `VITE_BASE_PATH=/<リポジトリ名>/` を合わせて設定してください（`npm run deploy` 実行時は `origin` のリポジトリ名を自動取得します）。
+> **補足**: GitHub Actions では `VITE_BASE_PATH=/${{ github.event.repository.name }}/` を自動設定してビルドします（`npm run deploy` 実行時も `origin` のリポジトリ名を自動取得します）。
 
 ---
 
@@ -113,6 +112,9 @@ npm run deploy
 
 ```text
 virtual_slide_door/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml               # main push 時に gh-pages へ自動デプロイする GitHub Actions
 ├── DESIGN.md                        # 要件・技術要素・設計書
 ├── README.md                        # 本ドキュメント
 ├── index.html
@@ -137,13 +139,13 @@ virtual_slide_door/
     │   ├── CameraRig.tsx            # 視点プリセット補間・スマホ縦横FOV調整
     │   ├── EnvironmentRig.tsx       # 昼/夕方/夜ライティング・環境反射・駐車場
     │   └── models/
-    │       ├── MinivanBody.tsx      # セレナ系車体・レール溝・ランプ・ホイール
+    │       ├── MinivanBody.tsx      # ミニバン車体・レール溝・ランプ・ホイール
     │       ├── MinivanInterior.tsx  # 2列目シート・Bピラーボタン・ルームランプ
     │       ├── SlidingDoor.tsx      # スライドドア本体・ハンドル・3点ローラーアーム
     │       └── PowerStep.tsx        # 電動格納ステップ・キックセンサー
     └── components/
         ├── HudOverlay.tsx           # 上部ステータス・視点切替・下部ドック
-        ├── SmartKeyFob.tsx          # インテリジェントキー風リモコンUI
+        ├── SmartKeyFob.tsx          # スマートキー風リモコンUI
         ├── CockpitSwitchPanel.tsx   # 運転席スイッチ（MAIN ON/OFF対応）
         └── ParentSettingsModal.tsx  # 保護者向け設定パネル
 ```

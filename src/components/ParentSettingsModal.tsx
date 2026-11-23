@@ -84,7 +84,7 @@ export function ParentSettingsModal({ open, onClose }: ParentSettingsModalProps)
           <div className="grid grid-cols-2 gap-2">
             {(
               [
-                { id: 'serena', label: 'セレナ風 電子ブザー' },
+                { id: 'electronic', label: '標準 電子ブザー' },
                 { id: 'soft', label: 'やわらかチャイム' },
               ] as { id: SoundProfile; label: string }[]
             ).map((opt) => (

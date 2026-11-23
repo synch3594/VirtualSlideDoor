@@ -46,7 +46,7 @@ export interface LiveSimulationState {
 export const liveSim: LiveSimulationState = {
   // Start slightly open or fully open? Let's start OPEN so the child can IMMEDIATELY watch it close
   // (or start CLOSED? Wait: starting OPEN at 1.0 or CLOSED at 0.0?
-  // Starting CLOSED at 0.0 feels like walking up to the parked Serena, and 1 tap opens then 1 tap closes —
+  // Starting CLOSED at 0.0 feels like walking up to the parked minivan, and 1 tap opens then 1 tap closes —
   // actually starting OPEN or CLOSED: let's start at CLOSED = 0 so they get the full pop-out + close cycle,
   // OR wait: user said "外から閉まるのを眺めるのが好き" — starting OPEN (1.0) lets them press Close on the VERY FIRST TAP!
   // Let's check: starting OPEN (progress = 1.0) shows off the interior seats, step, open door on the rail immediately,
@@ -141,7 +141,7 @@ export const useDoorStore = create<DoorStore>((set, get) => ({
   cameraPreset: 'exterior_front34',
   timeOfDay: 'day',
   bodyColorId: BODY_COLORS[0].id,
-  soundProfile: 'serena',
+  soundProfile: 'electronic',
   volume: 0.85,
   muted: false,
   dockCollapsed: false,

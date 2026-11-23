@@ -26,7 +26,7 @@ class DoorAudioEngine {
 
   private volume = 0.8;
   private muted = false;
-  private profile: SoundProfile = 'serena';
+  private profile: SoundProfile = 'electronic';
   private initialized = false;
 
   public unlock(): void {
@@ -191,7 +191,7 @@ class DoorAudioEngine {
     // Power Slide Motor Whine
     if (this.motorGain && this.motorOsc1 && this.motorOsc2 && this.motorFilter) {
       if (isPowerMotor && spd > 0.02) {
-        const pitchBase = this.profile === 'serena' ? 235 : 210;
+        const pitchBase = this.profile === 'electronic' ? 235 : 210;
         this.motorOsc1.frequency.setTargetAtTime(pitchBase + spd * 115, now, 0.04);
         this.motorOsc2.frequency.setTargetAtTime(pitchBase * 2.18 + spd * 245, now, 0.04);
         this.motorFilter.frequency.setTargetAtTime(480 + spd * 420, now, 0.04);
@@ -263,8 +263,8 @@ class DoorAudioEngine {
   /** Power sliding door operation start chime ("ピピッ") */
   public playBuzzerStart(): void {
     this.unlock();
-    if (this.profile === 'serena') {
-      // Crisp Nissan-style dual electronic beep
+    if (this.profile === 'electronic') {
+      // Crisp automotive dual electronic beep
       this.playTone(2380, 0.075, 0, 0.15, 'square');
       this.playTone(2380, 0.085, 0.105, 0.15, 'square');
     } else {
@@ -276,7 +276,7 @@ class DoorAudioEngine {
 
   /** Periodic warning beep while closing ("ピッ") */
   public playBuzzerClosingStep(): void {
-    if (this.profile === 'serena') {
+    if (this.profile === 'electronic') {
       this.playTone(2280, 0.11, 0, 0.125, 'square');
     } else {
       this.playTone(1975, 0.14, 0, 0.11, 'triangle');
@@ -286,15 +286,15 @@ class DoorAudioEngine {
   /** Single pause/stop beep ("ピッ") */
   public playBuzzerPause(): void {
     this.unlock();
-    const f = this.profile === 'serena' ? 2150 : 1860;
-    this.playTone(f, 0.09, 0, 0.13, this.profile === 'serena' ? 'square' : 'triangle');
+    const f = this.profile === 'electronic' ? 2150 : 1860;
+    this.playTone(f, 0.09, 0, 0.13, this.profile === 'electronic' ? 'square' : 'triangle');
   }
 
   /** Urgent anti-pinch obstacle reversal alert ("ピーッピーッピーッ！") */
   public playBuzzerAntiPinch(): void {
     this.unlock();
-    const f = this.profile === 'serena' ? 2560 : 2280;
-    const type: OscillatorType = this.profile === 'serena' ? 'square' : 'sawtooth';
+    const f = this.profile === 'electronic' ? 2560 : 2280;
+    const type: OscillatorType = this.profile === 'electronic' ? 'square' : 'sawtooth';
     this.playTone(f, 0.11, 0.0, 0.18, type);
     this.playTone(f, 0.11, 0.145, 0.18, type);
     this.playTone(f, 0.14, 0.29, 0.18, type);

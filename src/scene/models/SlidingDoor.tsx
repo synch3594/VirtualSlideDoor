@@ -6,9 +6,9 @@ import { computeDoorPose, DOOR_METRICS } from '../../simulation/doorKinematics';
 import { liveSim, useDoorStore } from '../../store/useDoorStore';
 
 /**
- * The Star of the App: Ultra-authentic Nissan Serena Left Power Sliding Door
+ * The Star of the App: Ultra-authentic Left Power Sliding Door
  * - 3D Pop-out, Parallel Slide, Pull-in, & Easy Closer Flush-fit kinematics
- * - Outer Chrome Handle with Serena signature One-Touch rubber switch
+ * - Outer Chrome Handle with One-Touch rubber switch
  * - Inner Trim + Interactive Inner Chrome Handle
  * - Front Edge Anti-Pinch Touch Strip (tap while closing to trigger safety reversal!)
  * - Articulated Center, Lower, and Upper Roller Arm Mechanisms riding inside the body rails
@@ -130,7 +130,7 @@ export function SlidingDoor() {
       doorGroupRef.current.rotation.y = pose.yaw;
     }
 
-    // 2. Animate Outer Chrome Handle Pull & Serena One-Touch Switch Depress
+    // 2. Animate Outer Chrome Handle Pull & One-Touch Switch Depress
     if (outerHandleRef.current) {
       const pull = Math.sin(liveSim.outerHandlePull * Math.PI);
       // Positive Y rotation pulls the front (+Z) grip outward toward +X
@@ -195,7 +195,7 @@ export function SlidingDoor() {
       upperArmGroupRef.current.scale.x = Math.max(0.35, 0.35 + (pose.xOffset / DOOR_METRICS.maxPopoutX) * 0.95);
     }
 
-    // 6. Subtle pulsing hotspot cue on the Serena One-Touch Handle
+    // 6. Subtle pulsing hotspot cue on the One-Touch Handle
     if (hotspotRingRef.current) {
       if (showHotspots && (phase === 'OPEN' || phase === 'CLOSED' || phase === 'PAUSED')) {
         const t = clock.getElapsedTime();
@@ -269,7 +269,7 @@ export function SlidingDoor() {
           <boxGeometry args={[0.058, 0.735, 1.052]} />
         </mesh>
 
-        {/* Serena Sculpted Lower Character Crease */}
+        {/* Sculpted Lower Character Crease */}
         <mesh position={[0.855, 0.48, 0]} material={paintMaterial}>
           <boxGeometry args={[0.016, 0.09, 1.03]} />
         </mesh>
@@ -338,7 +338,7 @@ export function SlidingDoor() {
           </mesh>
         </group>
 
-        {/* ===== OUTER CHROME DOOR HANDLE + SERENA SIGNATURE ONE-TOUCH SWITCH ===== */}
+        {/* ===== OUTER CHROME DOOR HANDLE + ONE-TOUCH SWITCH ===== */}
         <group position={[0.854, 0.96, 0.34]}>
           {/* Handle recess pocket */}
           <mesh position={[-0.002, 0, 0]}>
@@ -367,7 +367,7 @@ export function SlidingDoor() {
               <boxGeometry args={[0.022, 0.028, 0.024]} />
             </mesh>
 
-            {/* SERENA SIGNATURE ONE-TOUCH BLACK RUBBER SWITCH on handle! */}
+            {/* ONE-TOUCH BLACK RUBBER SWITCH on handle! */}
             <mesh
               ref={oneTouchBtnRef}
               position={[0.017, 0, 0.132]}

@@ -207,7 +207,7 @@ export function EnvironmentRig() {
         </mesh>
       </group>
 
-      {/* Grounded ambient occlusion shadow beneath the Serena */}
+      {/* Grounded ambient occlusion shadow beneath the minivan */}
       <ContactShadows
         position={[0, 0.008, 0]}
         opacity={timeOfDay === 'night' ? 0.8 : 0.58}

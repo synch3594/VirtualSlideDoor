@@ -1,7 +1,7 @@
 import type { DoorPose } from './types';
 
 /**
- * Physical dimensions (meters) for our Serena-style minivan sliding door.
+ * Physical dimensions (meters) for our minivan sliding door.
  * Coordinate system:
  *  +Y = up (0 = ground)
  *  +Z = front of vehicle, -Z = rear of vehicle

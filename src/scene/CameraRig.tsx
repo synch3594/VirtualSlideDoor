@@ -22,7 +22,7 @@ interface CameraSpec {
  * in the unobstructed area away from side/bottom UI docks.
  */
 const PRESETS: Record<CameraPreset, CameraSpec> = {
-  // 特等席：外から閉まるのを眺める斜め前（フロントVモーショングリル＋スライドドアの引き込み＆ツライチが一望！）
+  // 特等席：外から閉まるのを眺める斜め前（フロントグリル＋スライドドアの引き込み＆ツライチが一望！）
   exterior_front34: {
     pos: [4.15, 1.52, 2.95],
     target: [0.22, 0.94, -0.18],

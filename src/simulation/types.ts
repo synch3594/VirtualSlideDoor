@@ -20,7 +20,7 @@ export type CameraPreset =
 
 export type TimeOfDay = 'day' | 'sunset' | 'night';
 
-export type SoundProfile = 'serena' | 'soft';
+export type SoundProfile = 'electronic' | 'soft';
 
 export type TriggerSource =
   | 'outer_handle'
@@ -44,7 +44,7 @@ export interface BodyColorOption {
 export const BODY_COLORS: BodyColorOption[] = [
   {
     id: 'prism-white-2tone',
-    name: 'プリズムホワイト (2トーン)',
+    name: 'パールホワイト (2トーン)',
     hex: '#f1f5f9',
     roofHex: '#0f172a',
     metalness: 0.28,
@@ -52,7 +52,7 @@ export const BODY_COLORS: BodyColorOption[] = [
   },
   {
     id: 'prism-white',
-    name: 'プリズムホワイト',
+    name: 'パールホワイト',
     hex: '#f3f6fa',
     roofHex: '#f3f6fa',
     metalness: 0.25,
@@ -60,7 +60,7 @@ export const BODY_COLORS: BodyColorOption[] = [
   },
   {
     id: 'diamond-black',
-    name: 'ダイヤモンドブラック',
+    name: 'メタリックブラック',
     hex: '#141821',
     roofHex: '#141821',
     metalness: 0.65,
@@ -76,7 +76,7 @@ export const BODY_COLORS: BodyColorOption[] = [
   },
   {
     id: 'azurite-blue',
-    name: 'アズライトブルー',
+    name: 'ディープブルー',
     hex: '#1d4ed8',
     roofHex: '#1d4ed8',
     metalness: 0.58,
@@ -84,7 +84,7 @@ export const BODY_COLORS: BodyColorOption[] = [
   },
   {
     id: 'dark-metal-gray',
-    name: 'ダークメタルグレー',
+    name: 'ガンメタリック',
     hex: '#475569',
     roofHex: '#334155',
     metalness: 0.68,
@@ -92,7 +92,7 @@ export const BODY_COLORS: BodyColorOption[] = [
   },
   {
     id: 'cardinal-red-2tone',
-    name: 'カーディナルレッド (2トーン)',
+    name: 'クリムゾンレッド (2トーン)',
     hex: '#b91c1c',
     roofHex: '#0f172a',
     metalness: 0.52,

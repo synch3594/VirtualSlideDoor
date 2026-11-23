@@ -21,13 +21,13 @@ function createLicensePlateTexture(): THREE.CanvasTexture {
     ctx.fillStyle = '#14532d';
     ctx.font = 'bold 54px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('横浜 300', 256, 82);
+    ctx.fillText('東京 300', 256, 82);
 
-    // Hiragana + main number (C28 Serena homage!)
+    // Hiragana + main number (generic Japanese license plate)
     ctx.font = 'bold 56px sans-serif';
-    ctx.fillText('せ', 78, 198);
+    ctx.fillText('あ', 78, 198);
     ctx.font = 'bold 112px sans-serif';
-    ctx.fillText('28-28', 292, 206);
+    ctx.fillText('12-34', 292, 206);
 
     // Bolt caps
     ctx.fillStyle = '#94a3b8';
@@ -70,7 +70,7 @@ function AlloyWheel({ position, isLeft }: { position: [number, number, number]; 
         <torusGeometry args={[0.205, 0.016, 10, 28]} />
         <meshStandardMaterial color="#e2e8f0" metalness={0.92} roughness={0.18} />
       </mesh>
-      {/* 5-twin-spoke Serena Highway Star style machined spokes */}
+      {/* 5-twin-spoke machined alloy spokes */}
       {[0, 1, 2, 3, 4].map((i) => {
         const angle = (i * Math.PI * 2) / 5;
         return (
@@ -96,9 +96,9 @@ function AlloyWheel({ position, isLeft }: { position: [number, number, number]; 
 }
 
 /**
- * Nissan Serena (C28/C27 inspired) Minivan Body Shell:
- * - Sculpted aerodynamic nose with V-Motion grille & horizontal LED DRLs
- * - Authentic "Spur Line" step-down front side window & floating two-tone roof
+ * Modern Minivan Body Shell:
+ * - Sculpted aerodynamic nose with wide grille & horizontal LED DRLs
+ * - Step-down front side window & floating two-tone roof
  * - Full left-side sliding doorway cutout with rubber weatherstrip, latch striker, & recessed center rail groove
  * - Live hazard blinkers (front, side mirrors, rear) & dusk/night headlights + vertical LED taillights
  */
@@ -249,7 +249,7 @@ export function MinivanBody() {
     shape.moveTo(1.25, 0.32);
     shape.lineTo(2.26, 0.32); // bottom front bumper
     shape.quadraticCurveTo(2.35, 0.35, 2.34, 0.56); // lower chin
-    shape.lineTo(2.30, 0.96); // upright Serena nose grille
+    shape.lineTo(2.30, 0.96); // upright minivan nose grille
     shape.quadraticCurveTo(2.24, 1.12, 1.98, 1.16); // rounded hood front
     shape.lineTo(1.38, 1.24); // sloped hood to windshield base
     shape.lineTo(1.25, 1.24);
@@ -303,19 +303,19 @@ export function MinivanBody() {
       {/* ===================== SCULPTED FRONT NOSE & HOOD ===================== */}
       <mesh geometry={hoodGeometry} material={paintMaterial} castShadow receiveShadow />
 
-      {/* Serena C28 V-Motion Wide Dark Grille + Horizontal Signature Bars */}
+      {/* Wide Dark Grille + Horizontal Chrome Bars */}
       <group position={[0, 0.78, 2.33]}>
         {/* Main dark grille housing */}
         <mesh material={glossBlackMaterial}>
           <boxGeometry args={[1.38, 0.52, 0.06]} />
         </mesh>
-        {/* Horizontal metallic chrome accent bars (Serena signature!) */}
+        {/* Horizontal metallic chrome accent bars */}
         {[-0.14, -0.05, 0.04, 0.13].map((yOff) => (
           <mesh key={yOff} position={[0, yOff, 0.032]} material={chromeMaterial}>
             <boxGeometry args={[1.02 + (yOff + 0.15) * 0.9, 0.022, 0.014]} />
           </mesh>
         ))}
-        {/* V-Motion outer chrome side borders */}
+        {/* Outer angled chrome side borders */}
         <mesh position={[0.62, 0, 0.03]} rotation={[0, 0, -0.24]} material={chromeMaterial}>
           <boxGeometry args={[0.03, 0.48, 0.02]} />
         </mesh>
@@ -398,11 +398,11 @@ export function MinivanBody() {
         <mesh position={[0.82, 0.71, 0.72]} material={paintMaterial} castShadow receiveShadow>
           <boxGeometry args={[0.06, 0.74, 0.92]} />
         </mesh>
-        {/* Serena Signature Lower Side Sculpted Character Line (Front Door) */}
+        {/* Lower Side Sculpted Character Line (Front Door) */}
         <mesh position={[0.855, 0.48, 0.72]} material={paintMaterial}>
           <boxGeometry args={[0.018, 0.09, 0.88]} />
         </mesh>
-        {/* Front Side Window with Serena "Spur Line" step-down front quarter glass */}
+        {/* Front Side Window with step-down front quarter glass */}
         <mesh position={[0.815, 1.42, 0.7]} material={clearGlassMaterial}>
           <boxGeometry args={[0.025, 0.68, 0.86]} />
         </mesh>
@@ -533,7 +533,7 @@ export function MinivanBody() {
         <mesh position={[0.852, 1.084, -1.5]} material={chromeMaterial}>
           <boxGeometry args={[0.012, 0.018, 1.26]} />
         </mesh>
-        {/* Blacked-out D-pillar creating Serena's floating roof look */}
+        {/* Blacked-out D-pillar creating a floating roof look */}
         <mesh position={[0.82, 1.43, -2.18]} material={glossBlackMaterial}>
           <boxGeometry args={[0.055, 0.71, 0.16]} />
         </mesh>
@@ -590,7 +590,7 @@ export function MinivanBody() {
         <mesh position={[0, 0.29, -0.02]} material={matteRubberMaterial}>
           <boxGeometry args={[1.62, 0.14, 0.1]} />
         </mesh>
-        {/* Rear Privacy Glass (Serena Dual Back Door aesthetic!) */}
+        {/* Rear Privacy Glass */}
         <mesh position={[0, 1.43, 0.01]} material={privacyGlassMaterial}>
           <boxGeometry args={[1.42, 0.68, 0.04]} />
         </mesh>
@@ -604,7 +604,7 @@ export function MinivanBody() {
           <meshStandardMaterial map={plateTexture} roughness={0.35} />
         </mesh>
 
-        {/* Serena Vertical Slim LED Taillights (Left + Right) */}
+        {/* Vertical Slim LED Taillights (Left + Right) */}
         {[1, -1].map((side) => (
           <group key={`tail-${side}`} position={[side * 0.78, 1.24, -0.02]}>
             <mesh material={glossBlackMaterial}>

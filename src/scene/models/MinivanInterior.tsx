@@ -54,7 +54,7 @@ function CaptainSeat({ position }: { position: [number, number, number] }) {
 }
 
 /**
- * Detailed Serena cabin interior: 2nd-row captain seats, 3rd-row bench, front seats/dash,
+ * Detailed minivan cabin interior: 2nd-row captain seats, 3rd-row bench, front seats/dash,
  * B-pillar grab handle + interactive power slide button, theater-dimming LED dome & step lights,
  * and optional stuffed-bear obstacle for anti-pinch testing.
  */
@@ -112,7 +112,7 @@ export function MinivanInterior() {
         <boxGeometry args={[0.24, 0.04, 1.04]} />
         <meshStandardMaterial color="#11151d" roughness={0.9} />
       </mesh>
-      {/* Brushed silver Serena step scuff plate */}
+      {/* Brushed silver step scuff plate */}
       <mesh position={[0.74, 0.328, -0.31]}>
         <boxGeometry args={[0.07, 0.006, 0.78]} />
         <meshStandardMaterial color="#94a3b8" metalness={0.78} roughness={0.32} />
@@ -187,7 +187,7 @@ export function MinivanInterior() {
         <boxGeometry args={[1.48, 0.28, 0.45]} />
         <meshStandardMaterial color="#1b202a" roughness={0.72} />
       </mesh>
-      {/* Serena wide digital meter & infotainment screen */}
+      {/* Wide digital meter & infotainment screen */}
       <mesh position={[-0.12, 1.13, 1.12]}>
         <boxGeometry args={[0.74, 0.15, 0.04]} />
         <meshStandardMaterial color="#0f172a" emissive="#1e3a8a" emissiveIntensity={0.45} roughness={0.2} />
@@ -214,7 +214,7 @@ export function MinivanInterior() {
           <meshStandardMaterial color="#1e293b" roughness={0.6} />
         </mesh>
 
-        {/* Interactive B-Pillar Power Slide Door Button (Serena interior switch!) */}
+        {/* Interactive B-Pillar Power Slide Door Button (Interior switch!) */}
         <group
           position={[-0.028, 1.02, -0.065]}
           onClick={(e) => {
