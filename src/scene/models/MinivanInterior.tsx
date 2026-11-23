@@ -152,14 +152,14 @@ export function MinivanInterior() {
         />
       </mesh>
 
-      {/* Interior Headliner (bounded strictly inside roof cavity: z = -1.96 to +0.76, width = 1.28!) */}
-      <mesh position={[0, 1.745, -0.6]}>
-        <boxGeometry args={[1.28, 0.025, 2.72]} />
+      {/* Interior Headliner (bounded strictly inside roof cavity: z = -1.96 to +0.74, width = 1.24!) */}
+      <mesh position={[0, 1.725, -0.61]}>
+        <boxGeometry args={[1.24, 0.025, 2.7]} />
         <meshStandardMaterial color="#cbd5e1" roughness={0.92} />
       </mesh>
 
       {/* Interior Rearview Mirror mounted inside top of windshield */}
-      <group position={[0, 1.63, 0.93]}>
+      <group position={[0, 1.615, 0.91]}>
         <mesh position={[0, 0.055, -0.02]} rotation={[0.4, 0, 0]}>
           <cylinderGeometry args={[0.008, 0.008, 0.09, 8]} />
           <meshStandardMaterial color="#0f172a" roughness={0.5} />
@@ -171,7 +171,7 @@ export function MinivanInterior() {
       </group>
 
       {/* Overhead LED Dome Lamp */}
-      <mesh position={[0.04, 1.725, -0.25]}>
+      <mesh position={[0.04, 1.708, -0.25]}>
         <boxGeometry args={[0.22, 0.018, 0.14]} />
         <meshStandardMaterial
           ref={domeMeshMatRef}
@@ -219,17 +219,17 @@ export function MinivanInterior() {
       <CaptainSeat position={[0.36, 0.355, 0.54]} geos={seatGeos} />
       <CaptainSeat position={[-0.36, 0.355, 0.54]} geos={seatGeos} />
 
-      {/* Contoured Dashboard fitting cleanly beneath curved windshield cowl */}
-      <mesh position={[0, 0.92, 1.18]} geometry={dashGeo}>
+      {/* Contoured Dashboard fitting cleanly beneath raised curved windshield cowl */}
+      <mesh position={[0, 0.96, 1.18]} geometry={dashGeo}>
         <meshStandardMaterial color="#1b202a" roughness={0.74} />
       </mesh>
       {/* Wide digital meter & infotainment screen */}
-      <mesh position={[-0.1, 1.07, 1.06]} rotation={[-0.14, 0, 0]}>
+      <mesh position={[-0.1, 1.11, 1.06]} rotation={[-0.14, 0, 0]}>
         <boxGeometry args={[0.72, 0.14, 0.036]} />
         <meshStandardMaterial color="#0f172a" emissive="#1e3a8a" emissiveIntensity={0.45} roughness={0.2} />
       </mesh>
       {/* Right-hand-drive Steering Wheel */}
-      <mesh position={[-0.36, 1.0, 0.94]} rotation={[0.35, 0, 0]}>
+      <mesh position={[-0.36, 1.03, 0.94]} rotation={[0.35, 0, 0]}>
         <torusGeometry args={[0.155, 0.019, 12, 26]} />
         <meshStandardMaterial color="#111827" roughness={0.55} />
       </mesh>

@@ -40,8 +40,8 @@ const PRESETS: Record<CameraPreset, CameraSpec> = {
   },
   // レール＆ローラーアーム機構アップ：斜め後ろからセンターレールとアームの動きを観察！
   rail_closeup: {
-    pos: [2.25, 1.34, -2.12],
-    target: [0.76, 1.02, -0.82],
+    pos: [2.25, 1.38, -2.12],
+    target: [0.76, 1.09, -0.82],
     fovLandscape: 36,
     fovPortrait: 44,
     idealAspect: 1.4,

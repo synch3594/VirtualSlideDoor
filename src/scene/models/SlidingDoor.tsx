@@ -8,17 +8,17 @@ import {
   bodySideX,
   createCurvedSidePanel,
   createRoundedBoxGeometry,
+  VEHICLE_DIMS,
 } from './vehicleGeometry';
 
 /**
  * The Star of the App: Ultra-authentic Sculpted Left Power Sliding Door
- * - Conforms to the EXACT bodySideX(y) tumblehome & convex door curvature for 0mm flush-fit!
+ * - Conforms to the EXACT bodySideX(y) tumblehome & raised 1.15m beltline for 0mm flush-fit!
+ * - Substantial realistic window frame sashes & smaller modern greenhouse glass ratio
  * - 3D Pop-out, Parallel Slide, Pull-in, & Easy Closer Flush-fit kinematics
  * - Contoured Outer Chrome Handle with One-Touch rubber switch
  * - Curved Inner Trim + Interactive Inner Chrome Handle
- * - Front Edge Anti-Pinch Touch Strip (tap while closing to trigger safety reversal!)
- * - Articulated Center, Lower, and Upper Roller Arm Mechanisms riding inside the body rails
- * - Smooth Finger/Mouse Manual Drag Gesture Support
+ * - Front Edge Anti-Pinch Touch Strip & Articulated 3-Point Roller Arm Mechanisms
  */
 export function SlidingDoor() {
   const doorGroupRef = useRef<THREE.Group>(null);
@@ -26,7 +26,6 @@ export function SlidingDoor() {
   const oneTouchBtnRef = useRef<THREE.Mesh>(null);
   const innerHandleRef = useRef<THREE.Mesh>(null);
 
-  // Articulated roller arm refs
   const centerArmPivotRef = useRef<THREE.Group>(null);
   const centerArmBarRef = useRef<THREE.Mesh>(null);
   const centerRollerCarriageRef = useRef<THREE.Group>(null);
@@ -34,7 +33,6 @@ export function SlidingDoor() {
   const upperArmGroupRef = useRef<THREE.Group>(null);
   const hotspotRingRef = useRef<THREE.MeshBasicMaterial>(null);
 
-  // Drag gesture state
   const dragStateRef = useRef<{
     active: boolean;
     startClientX: number;
@@ -106,7 +104,7 @@ export function SlidingDoor() {
         color: '#0a121f',
         metalness: 0.12,
         roughness: 0.05,
-        opacity: 0.85,
+        opacity: 0.87,
         transparent: true,
         clearcoat: 1.0,
         clearcoatRoughness: 0.03,
@@ -123,20 +121,22 @@ export function SlidingDoor() {
     []
   );
 
-  // Curved sliding door geometries matching bodySideX(y) identically!
+  // Curved sliding door geometries matching bodySideX(y) & raised 1.15m beltline identically!
   const doorGeos = useMemo(() => {
     const cz = DOOR_METRICS.doorClosedCenterZ; // -0.31
-    const zFront = cz + 0.526; // +0.216 (4mm crisp shut line to B-pillar at +0.22)
-    const zRear = cz - 0.526; // -0.836 (4mm crisp shut line to C-pillar at -0.84)
+    const zFront = cz + 0.526; // +0.216 (6mm crisp shut line to front door at +0.222)
+    const zRear = cz - 0.526; // -0.836 (8mm crisp shut line to rear quarter at -0.844)
+    const beltY = VEHICLE_DIMS.beltlineY; // 1.15
+    const winTopY = VEHICLE_DIMS.windowTopY; // 1.685
 
     return {
-      // Sculpted lower painted steel door skin
+      // Sculpted lower painted steel door skin (taller body ratio!)
       outerLowerSkin: createCurvedSidePanel({
         side: 1,
         zMin: zRear,
         zMax: zFront,
         yMin: 0.344,
-        yMax: 1.072,
+        yMax: beltY + 0.002,
         thickness: 0.044,
         characterCrease: true,
         zShift: cz,
@@ -149,8 +149,8 @@ export function SlidingDoor() {
         side: 1,
         zMin: zRear + 0.004,
         zMax: zFront - 0.004,
-        yMin: 1.064,
-        yMax: 1.084,
+        yMin: beltY - 0.006,
+        yMax: beltY + 0.014,
         xOffset: 0.005,
         thickness: 0.01,
         zShift: cz,
@@ -158,13 +158,13 @@ export function SlidingDoor() {
         cols: 12,
         usePlanTaper: false,
       }),
-      // Curved upper privacy glass leaning smoothly inward with cabin tumblehome
+      // Curved upper privacy glass (more realistic compact height 1.154 -> 1.682)
       upperGlass: createCurvedSidePanel({
         side: 1,
-        zMin: zRear + 0.056,
-        zMax: zFront - 0.056,
-        yMin: 1.074,
-        yMax: 1.724,
+        zMin: zRear + 0.072,
+        zMax: zFront - 0.072,
+        yMin: beltY + 0.004,
+        yMax: winTopY - 0.002,
         xOffset: -0.008,
         thickness: 0.014,
         zShift: cz,
@@ -172,13 +172,13 @@ export function SlidingDoor() {
         cols: 12,
         usePlanTaper: false,
       }),
-      // Curved front vertical gloss-black window sash
+      // More substantial front & rear vertical gloss-black window sashes (7.5cm)
       sashFront: createCurvedSidePanel({
         side: 1,
-        zMin: zFront - 0.06,
+        zMin: zFront - 0.075,
         zMax: zFront,
-        yMin: 1.072,
-        yMax: 1.748,
+        yMin: beltY + 0.002,
+        yMax: 1.732,
         xOffset: 0.001,
         thickness: 0.038,
         zShift: cz,
@@ -186,13 +186,12 @@ export function SlidingDoor() {
         cols: 2,
         usePlanTaper: false,
       }),
-      // Curved rear vertical gloss-black window sash
       sashRear: createCurvedSidePanel({
         side: 1,
         zMin: zRear,
-        zMax: zRear + 0.06,
-        yMin: 1.072,
-        yMax: 1.748,
+        zMax: zRear + 0.075,
+        yMin: beltY + 0.002,
+        yMax: 1.732,
         xOffset: 0.001,
         thickness: 0.038,
         zShift: cz,
@@ -200,17 +199,17 @@ export function SlidingDoor() {
         cols: 2,
         usePlanTaper: false,
       }),
-      // Curved top window frame sash meeting roof cant rail flush
+      // Substantial top window frame header meeting the thick roof cant rail flush
       sashTop: createCurvedSidePanel({
         side: 1,
         zMin: zRear,
         zMax: zFront,
-        yMin: 1.718,
-        yMax: 1.748,
+        yMin: winTopY - 0.006,
+        yMax: 1.734,
         xOffset: 0.001,
         thickness: 0.038,
         zShift: cz,
-        rows: 3,
+        rows: 4,
         cols: 12,
         usePlanTaper: false,
       }),
@@ -220,7 +219,7 @@ export function SlidingDoor() {
         zMin: zRear + 0.022,
         zMax: zFront - 0.022,
         yMin: 0.365,
-        yMax: 1.055,
+        yMax: beltY - 0.015,
         xOffset: -0.044,
         thickness: 0.028,
         zShift: cz,
@@ -234,7 +233,7 @@ export function SlidingDoor() {
         zMin: zFront - 0.002,
         zMax: zFront + 0.012,
         yMin: 0.35,
-        yMax: 1.742,
+        yMax: 1.725,
         xOffset: -0.008,
         thickness: 0.034,
         zShift: cz,
@@ -248,7 +247,7 @@ export function SlidingDoor() {
         zMin: zRear - 0.01,
         zMax: zRear + 0.002,
         yMin: 0.35,
-        yMax: 1.742,
+        yMax: 1.725,
         xOffset: -0.008,
         thickness: 0.032,
         zShift: cz,
@@ -261,14 +260,14 @@ export function SlidingDoor() {
     };
   }, []);
 
-  const handleSurfaceX = bodySideX(0.95);
+  const handleY = 1.015;
+  const handleSurfaceX = bodySideX(handleY);
   const centerRailBodyX = bodySideX(DOOR_METRICS.centerRailY);
-  const upperTrackX = bodySideX(1.745);
+  const upperTrackX = bodySideX(1.72);
 
   useFrame(({ clock }) => {
     const pose = computeDoorPose(liveSim.progress, liveSim.elasticBounce);
 
-    // 1. Update Sliding Door 3D Position & Yaw
     if (doorGroupRef.current) {
       doorGroupRef.current.position.set(
         pose.xOffset,
@@ -278,7 +277,6 @@ export function SlidingDoor() {
       doorGroupRef.current.rotation.y = pose.yaw;
     }
 
-    // 2. Animate Outer Chrome Handle Pull & One-Touch Switch Depress
     if (outerHandleRef.current) {
       const pull = Math.sin(liveSim.outerHandlePull * Math.PI);
       outerHandleRef.current.rotation.y = pull * 0.28;
@@ -292,7 +290,7 @@ export function SlidingDoor() {
       innerHandleRef.current.rotation.y = pull * 0.35;
     }
 
-    // 3. Articulated Center Roller Arm riding precisely inside the body's curved center rail!
+    // Articulated Center Roller Arm riding precisely inside the body's curved center rail!
     const cosY = Math.cos(pose.yaw);
     const sinY = Math.sin(pose.yaw);
     const localArmX = centerRailBodyX - 0.04;
@@ -325,7 +323,6 @@ export function SlidingDoor() {
       centerArmBarRef.current.position.z = length * 0.5;
     }
 
-    // 4. Lower Gooseneck Roller Arm (front bottom corner of sliding door)
     if (lowerArmGroupRef.current) {
       const lowerX = bodySideX(0.345) - 0.065 + pose.xOffset * 0.5;
       const lowerZ = DOOR_METRICS.doorClosedCenterZ + pose.zOffset + 0.44;
@@ -336,18 +333,16 @@ export function SlidingDoor() {
       );
     }
 
-    // 5. Upper Roof Track Guide Arm (neatly tucked inside tumblehome roof cant rail!)
     if (upperArmGroupRef.current) {
       const upperX = upperTrackX - 0.055 + pose.xOffset * 0.5;
       const upperZ = DOOR_METRICS.doorClosedCenterZ + pose.zOffset + 0.42;
-      upperArmGroupRef.current.position.set(upperX, 1.735, upperZ);
+      upperArmGroupRef.current.position.set(upperX, 1.715, upperZ);
       upperArmGroupRef.current.scale.x = Math.max(
         0.32,
         0.32 + (pose.xOffset / DOOR_METRICS.maxPopoutX) * 0.92
       );
     }
 
-    // 6. Subtle pulsing hotspot cue on the One-Touch Handle
     if (hotspotRingRef.current) {
       if (showHotspots && (phase === 'OPEN' || phase === 'CLOSED' || phase === 'PAUSED')) {
         const t = clock.getElapsedTime();
@@ -358,7 +353,6 @@ export function SlidingDoor() {
     }
   });
 
-  // Pointer handlers for direct manual dragging of the sliding door!
   const handleDoorPointerDown = (e: ThreeEvent<PointerEvent>) => {
     if (powerMainOn) return;
     e.stopPropagation();
@@ -413,35 +407,28 @@ export function SlidingDoor() {
         onPointerUp={handleDoorPointerUp}
         onPointerCancel={handleDoorPointerUp}
       >
-        {/* Sculpted Outer Lower Painted Steel Panel */}
         <mesh geometry={doorGeos.outerLowerSkin} material={paintMaterial} castShadow receiveShadow />
-
-        {/* Curved Chrome Window Beltline Trim */}
         <mesh geometry={doorGeos.beltChrome} material={chromeMaterial} />
-
-        {/* Curved Upper Window Privacy Glass & Tumblehome Window Frame Sashes */}
         <mesh geometry={doorGeos.upperGlass} material={privacyGlassMaterial} />
         <mesh geometry={doorGeos.sashFront} material={glossBlackMaterial} />
         <mesh geometry={doorGeos.sashRear} material={glossBlackMaterial} />
         <mesh geometry={doorGeos.sashTop} material={glossBlackMaterial} />
 
-        {/* ===== INNER DOOR TRIM PANEL (visible when open & from 2nd-row interior view) ===== */}
+        {/* ===== INNER DOOR TRIM PANEL ===== */}
         <mesh geometry={doorGeos.innerTrim}>
           <meshStandardMaterial color="#1f242d" roughness={0.82} />
         </mesh>
-        {/* Contoured Inner Armrest Pad */}
-        <mesh position={[bodySideX(0.78) - 0.085, 0.78, -0.04]} geometry={doorGeos.armrestPad}>
+        <mesh position={[bodySideX(0.8) - 0.085, 0.8, -0.04]} geometry={doorGeos.armrestPad}>
           <meshStandardMaterial color="#2a303c" roughness={0.85} />
         </mesh>
-        {/* Inner Door Bottle Pocket */}
-        <mesh position={[bodySideX(0.48) - 0.084, 0.48, 0.24]}>
+        <mesh position={[bodySideX(0.49) - 0.084, 0.49, 0.24]}>
           <boxGeometry args={[0.036, 0.14, 0.28]} />
           <meshStandardMaterial color="#141820" roughness={0.9} />
         </mesh>
 
-        {/* Interactive Inner Chrome Door Handle (for Interior 2nd-row view!) */}
+        {/* Interactive Inner Chrome Door Handle */}
         <group
-          position={[bodySideX(0.92) - 0.075, 0.92, 0.28]}
+          position={[bodySideX(0.96) - 0.075, 0.96, 0.28]}
           onClick={(e) => {
             e.stopPropagation();
             triggerDoorToggle('inner_handle');
@@ -461,14 +448,12 @@ export function SlidingDoor() {
         </group>
 
         {/* ===== OUTER CHROME DOOR HANDLE + ONE-TOUCH SWITCH ===== */}
-        <group position={[handleSurfaceX + 0.002, 0.95, 0.34]}>
-          {/* Handle recess pocket */}
+        <group position={[handleSurfaceX + 0.002, handleY, 0.34]}>
           <mesh position={[-0.004, 0, 0]}>
             <boxGeometry args={[0.012, 0.062, 0.205]} />
             <meshStandardMaterial color="#0f172a" roughness={0.5} />
           </mesh>
 
-          {/* Pivoting Chrome Outer Handle */}
           <group
             ref={outerHandleRef}
             position={[0, 0, -0.075]}
@@ -477,9 +462,7 @@ export function SlidingDoor() {
               triggerDoorToggle('outer_handle');
             }}
           >
-            {/* Contoured Chrome Pull Bar */}
             <mesh position={[0.019, 0, 0.075]} geometry={doorGeos.outerHandleBar} material={chromeMaterial} castShadow />
-            {/* Front & rear handle mounting posts */}
             <mesh position={[0.006, 0, 0.012]} material={chromeMaterial}>
               <boxGeometry args={[0.022, 0.026, 0.024]} />
             </mesh>
@@ -487,7 +470,6 @@ export function SlidingDoor() {
               <boxGeometry args={[0.022, 0.026, 0.024]} />
             </mesh>
 
-            {/* ONE-TOUCH BLACK RUBBER SWITCH on handle! */}
             <mesh
               ref={oneTouchBtnRef}
               position={[0.018, 0, 0.132]}
@@ -501,7 +483,6 @@ export function SlidingDoor() {
             </mesh>
           </group>
 
-          {/* Subtle glowing hotspot ring on handle so young kids instantly spot it */}
           <mesh
             position={[0.038, 0, 0.01]}
             rotation={[0, Math.PI / 2, 0]}
@@ -520,7 +501,6 @@ export function SlidingDoor() {
             />
           </mesh>
 
-          {/* Generous invisible hit box for toddler thumbs on smartphone */}
           <mesh
             visible={false}
             onClick={(e) => {
@@ -558,7 +538,6 @@ export function SlidingDoor() {
           </mesh>
         )}
 
-        {/* Curved Rear Edge Rubber Seal & Center Hinge Mounting Bracket */}
         <mesh geometry={doorGeos.rearEdgeSeal} material={rubberMaterial} />
         <mesh position={[centerRailBodyX - 0.04, DOOR_METRICS.centerRailY, DOOR_METRICS.doorRearArmLocalZ]}>
           <boxGeometry args={[0.038, 0.048, 0.052]} />
@@ -567,7 +546,6 @@ export function SlidingDoor() {
       </group>
 
       {/* ===================== ARTICULATED 3-POINT ROLLER ARM MECHANISMS ===================== */}
-      {/* 1. Center Roller Carriage riding strictly inside the body's curved center rail */}
       <group
         ref={centerRollerCarriageRef}
         position={[DOOR_METRICS.bodyLeftX - 0.055, DOOR_METRICS.centerRailY, -0.84]}
@@ -586,7 +564,6 @@ export function SlidingDoor() {
         </mesh>
       </group>
 
-      {/* Center Articulating Steel Link Arm */}
       <group
         ref={centerArmPivotRef}
         position={[DOOR_METRICS.bodyLeftX - 0.055, DOOR_METRICS.centerRailY, -0.84]}
@@ -597,7 +574,6 @@ export function SlidingDoor() {
         </mesh>
       </group>
 
-      {/* 2. Lower Heavy-Duty Gooseneck Roller Arm */}
       <group ref={lowerArmGroupRef} position={[0.76, 0.345, 0.13]}>
         <mesh castShadow>
           <boxGeometry args={[0.14, 0.022, 0.052]} />
@@ -609,8 +585,7 @@ export function SlidingDoor() {
         </mesh>
       </group>
 
-      {/* 3. Upper Roof Guide Roller Arm (aligned inside tumblehome roof track) */}
-      <group ref={upperArmGroupRef} position={[upperTrackX - 0.055, 1.735, 0.11]}>
+      <group ref={upperArmGroupRef} position={[upperTrackX - 0.055, 1.715, 0.11]}>
         <mesh>
           <boxGeometry args={[0.125, 0.016, 0.04]} />
           <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.38} />

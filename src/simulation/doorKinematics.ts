@@ -23,8 +23,8 @@ export const DOOR_METRICS = {
   easyCloserProgress: 0.045,
   /** Progress threshold where pop-out finishes and pure parallel slide begins */
   popoutEndProgress: 0.185,
-  /** Center rail height (just below rear quarter glass) */
-  centerRailY: 1.025,
+  /** Center rail height (just below rear quarter glass beltline at 1.15m) */
+  centerRailY: 1.095,
   /** Rear hinge mount local Z on the sliding door (near rear edge) */
   doorRearArmLocalZ: -0.495,
 } as const;
