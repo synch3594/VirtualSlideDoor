@@ -78,6 +78,37 @@ npm run preview
 
 ---
 
+## GitHub Pages へのデプロイ（`gh-pages` ブランチ）
+
+同一リポジトリ内の専用ブランチ **`gh-pages`** に、ローカルからビルド成果物（`dist/`）をデプロイして公開する構成になっています。
+
+### 公開までの手順（初回セットアップ）
+
+1. **ローカルから `gh-pages` ブランチへデプロイする**
+   ```bash
+   npm run deploy
+   ```
+   - 本番ビルド（`dist/` 生成・`.nojekyll` 付与）を実行し、`origin` の `gh-pages` ブランチへプッシュします。
+2. **GitHub Pages の公開ブランチを設定する（初回のみ）**
+   - リポジトリの **Settings → Pages** を開く
+   - **Build and deployment → Source** で **Deploy from a branch** を選択
+   - **Branch** に **`gh-pages`**、フォルダに **`/ (root)`** を選択して **Save** をクリック
+3. **公開URLへアクセスする**
+   - 数十秒〜1分ほど待つと `https://synch3594.github.io/VirtualSlideDoor/` で公開されます。
+   - スマホのブラウザ（iOS Safari / Android Chrome）で開き、**「ホーム画面に追加」** をするとフルスクリーンのアプリとしてオフラインでも遊べます。
+
+### 2回目以降の更新方法
+
+更新したいタイミングで以下のコマンドを実行するだけで、`gh-pages` ブランチが最新版に更新されます。
+
+```bash
+npm run deploy
+```
+
+> **補足**: リポジトリ名を変更した場合は `vite.config.ts` のデフォルト `base` または環境変数 `VITE_BASE_PATH=/<リポジトリ名>/` を合わせて設定してください（`npm run deploy` 実行時は `origin` のリポジトリ名を自動取得します）。
+
+---
+
 ## ディレクトリ構成
 
 ```text
@@ -86,6 +117,8 @@ virtual_slide_door/
 ├── README.md                        # 本ドキュメント
 ├── index.html
 ├── vite.config.ts                   # Vite & PWA 設定
+├── scripts/
+│   └── deploy-gh-pages.mjs          # GitHub Pages デプロイスクリプト（npm run deploy）
 ├── public/
 │   └── icon.svg                     # アプリ・PWAアイコン
 └── src/
