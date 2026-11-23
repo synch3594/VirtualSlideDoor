@@ -158,13 +158,13 @@ export function SlidingDoor() {
         cols: 12,
         usePlanTaper: false,
       }),
-      // Curved upper privacy glass (more realistic compact height 1.154 -> 1.682)
+      // Curved upper privacy glass (tucked cleanly inside top sash below roof cant rail)
       upperGlass: createCurvedSidePanel({
         side: 1,
         zMin: zRear + 0.072,
         zMax: zFront - 0.072,
         yMin: beltY + 0.004,
-        yMax: winTopY - 0.002,
+        yMax: winTopY - 0.016,
         xOffset: -0.008,
         thickness: 0.014,
         zShift: cz,
@@ -178,7 +178,7 @@ export function SlidingDoor() {
         zMin: zFront - 0.075,
         zMax: zFront,
         yMin: beltY + 0.002,
-        yMax: 1.732,
+        yMax: winTopY,
         xOffset: 0.001,
         thickness: 0.038,
         zShift: cz,
@@ -191,7 +191,7 @@ export function SlidingDoor() {
         zMin: zRear,
         zMax: zRear + 0.075,
         yMin: beltY + 0.002,
-        yMax: 1.732,
+        yMax: winTopY,
         xOffset: 0.001,
         thickness: 0.038,
         zShift: cz,
@@ -199,13 +199,13 @@ export function SlidingDoor() {
         cols: 2,
         usePlanTaper: false,
       }),
-      // Substantial top window frame header meeting the thick roof cant rail flush
+      // Top window frame header meeting the unified roof cant rail flush with zero step
       sashTop: createCurvedSidePanel({
         side: 1,
         zMin: zRear,
         zMax: zFront,
-        yMin: winTopY - 0.006,
-        yMax: 1.734,
+        yMin: winTopY - 0.022,
+        yMax: winTopY,
         xOffset: 0.001,
         thickness: 0.038,
         zShift: cz,

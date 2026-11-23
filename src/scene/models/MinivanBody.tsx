@@ -18,6 +18,7 @@ import {
   createMirrorCapGeometry,
   createParametricGrilleStudsGeometry,
   createRearGlassGeometry,
+  createRearHeaderGeometry,
   createRearTailgateGeometry,
   createRoundedBoxGeometry,
   createSculptedRoofGeometry,
@@ -69,8 +70,7 @@ function createLicensePlateTexture(): THREE.CanvasTexture {
 }
 
 /**
- * Generates a crisp procedural honeycomb/diamond automotive grille mesh texture + bump map
- * so the dark grille opening has genuine modern depth and fine lattice texture!
+ * Generates a crisp procedural honeycomb/diamond automotive grille mesh texture + bump map.
  */
 function createGrilleMeshTextures(): { map: THREE.CanvasTexture; bumpMap: THREE.CanvasTexture } {
   const size = 512;
@@ -85,13 +85,11 @@ function createGrilleMeshTextures(): { map: THREE.CanvasTexture; bumpMap: THREE.
   const bCtx = bumpCanvas.getContext('2d');
 
   if (cCtx && bCtx) {
-    // Deep recessed dark radiator backing
     cCtx.fillStyle = '#05080f';
     cCtx.fillRect(0, 0, size, size);
     bCtx.fillStyle = '#0a0a0a';
     bCtx.fillRect(0, 0, size, size);
 
-    // Draw interlocking fine hexagonal/diamond mesh cells
     const cellW = 32;
     const cellH = 22;
     const drawLattice = (ctx: CanvasRenderingContext2D, stroke: string, lineWidth: number) => {
@@ -117,7 +115,6 @@ function createGrilleMeshTextures(): { map: THREE.CanvasTexture; bumpMap: THREE.
       }
     };
 
-    // Metallic dark gunmetal lattice with subtle upper highlight edge
     drawLattice(cCtx, '#1e2736', 4.8);
     drawLattice(cCtx, '#334155', 1.8);
     drawLattice(bCtx, '#d8d8d8', 4.5);
@@ -126,13 +123,174 @@ function createGrilleMeshTextures(): { map: THREE.CanvasTexture; bumpMap: THREE.
   const map = new THREE.CanvasTexture(colorCanvas);
   map.wrapS = THREE.RepeatWrapping;
   map.wrapT = THREE.RepeatWrapping;
-  map.repeat.set(3.4, 1.4);
+  map.repeat.set(3.0, 1.4);
   map.colorSpace = THREE.SRGBColorSpace;
 
   const bumpMap = new THREE.CanvasTexture(bumpCanvas);
   bumpMap.wrapS = THREE.RepeatWrapping;
   bumpMap.wrapT = THREE.RepeatWrapping;
-  bumpMap.repeat.set(3.4, 1.4);
+  bumpMap.repeat.set(3.0, 1.4);
+
+  return { map, bumpMap };
+}
+
+/**
+ * Generates realistic tire tread-block + sidewall rib textures (`map` + `bumpMap`)
+ * aligned directly to `createSculptedTireGeometry()`'s LatheGeometry UVs:
+ *  - u ∈ [0, 1] wraps around the full tire circumference
+ *  - v ∈ [0.18, 0.82] covers the 5 tread ribs & 4 circumferential channels
+ *  - v < 0.18 and v > 0.82 cover the sculpted left & right rubber sidewalls
+ */
+function createTireTextures(): { map: THREE.CanvasTexture; bumpMap: THREE.CanvasTexture } {
+  const W = 1024;
+  const H = 512;
+
+  const colorCanvas = document.createElement('canvas');
+  colorCanvas.width = W;
+  colorCanvas.height = H;
+  const cCtx = colorCanvas.getContext('2d');
+
+  const bumpCanvas = document.createElement('canvas');
+  bumpCanvas.width = W;
+  bumpCanvas.height = H;
+  const bCtx = bumpCanvas.getContext('2d');
+
+  if (cCtx && bCtx) {
+    // Base vulcanized dark rubber
+    cCtx.fillStyle = '#181c23';
+    cCtx.fillRect(0, 0, W, H);
+    bCtx.fillStyle = '#808080';
+    bCtx.fillRect(0, 0, W, H);
+
+    // Sidewall subtle concentric molded ribs & radial shoulder tread lugs
+    const drawSidewall = (yStart: number, yEnd: number, isTop: boolean) => {
+      cCtx.fillStyle = '#14171e';
+      cCtx.fillRect(0, yStart, W, yEnd - yStart);
+      bCtx.fillStyle = '#707070';
+      bCtx.fillRect(0, yStart, W, yEnd - yStart);
+
+      // Concentric sidewall molding rings
+      for (const frac of [0.35, 0.58, 0.78]) {
+        const yRing = yStart + (yEnd - yStart) * frac;
+        cCtx.strokeStyle = '#1e242e';
+        cCtx.lineWidth = 3;
+        cCtx.beginPath();
+        cCtx.moveTo(0, yRing);
+        cCtx.lineTo(W, yRing);
+        cCtx.stroke();
+
+        bCtx.strokeStyle = '#a8a8a8';
+        bCtx.lineWidth = 3;
+        bCtx.beginPath();
+        bCtx.moveTo(0, yRing);
+        bCtx.lineTo(W, yRing);
+        bCtx.stroke();
+      }
+
+      // Molded radial shoulder buttress lugs around circumference
+      const numLugs = 42;
+      const lugW = W / numLugs;
+      for (let i = 0; i < numLugs; i++) {
+        const x = i * lugW;
+        const yLug = isTop ? yEnd - 24 : yStart + 4;
+        cCtx.fillStyle = '#1f242e';
+        cCtx.fillRect(x + 4, yLug, lugW * 0.56, 20);
+        bCtx.fillStyle = '#cccccc';
+        bCtx.fillRect(x + 4, yLug, lugW * 0.56, 20);
+      }
+    };
+
+    drawSidewall(0, Math.round(H * 0.185), true);
+    drawSidewall(Math.round(H * 0.815), H, false);
+
+    // Tread crown: asymmetric angled tread blocks + fine sipes across the 5 ribs
+    const yTread0 = Math.round(H * 0.185);
+    const yTread1 = Math.round(H * 0.815);
+    cCtx.fillStyle = '#1b2028';
+    cCtx.fillRect(0, yTread0, W, yTread1 - yTread0);
+    bCtx.fillStyle = '#d4d4d4';
+    bCtx.fillRect(0, yTread0, W, yTread1 - yTread0);
+
+    // Circumferential groove dark shadow strips matching LatheGeometry's 4 channels
+    for (const gCenter of [0.31, 0.43, 0.57, 0.69]) {
+      const gy = Math.round(H * gCenter);
+      cCtx.fillStyle = '#0c0e13';
+      cCtx.fillRect(0, gy - 8, W, 16);
+      bCtx.fillStyle = '#141414';
+      bCtx.fillRect(0, gy - 8, W, 16);
+    }
+
+    // Angled lateral tread block grooves & sipes around all 48 tread pitches
+    const pitches = 44;
+    const pitchW = W / pitches;
+    for (let i = 0; i < pitches; i++) {
+      const x = i * pitchW;
+      // Outer left angled slots
+      bCtx.strokeStyle = '#181818';
+      cCtx.strokeStyle = '#0d1015';
+      bCtx.lineWidth = 6.5;
+      cCtx.lineWidth = 6.5;
+
+      cCtx.beginPath();
+      cCtx.moveTo(x, H * 0.18);
+      cCtx.lineTo(x + pitchW * 0.45, H * 0.31);
+      cCtx.stroke();
+      bCtx.beginPath();
+      bCtx.moveTo(x, H * 0.18);
+      bCtx.lineTo(x + pitchW * 0.45, H * 0.31);
+      bCtx.stroke();
+
+      // Inner left angled sipes
+      cCtx.beginPath();
+      cCtx.moveTo(x + pitchW * 0.35, H * 0.31);
+      cCtx.lineTo(x + pitchW * 0.72, H * 0.43);
+      cCtx.stroke();
+      bCtx.beginPath();
+      bCtx.moveTo(x + pitchW * 0.35, H * 0.31);
+      bCtx.lineTo(x + pitchW * 0.72, H * 0.43);
+      bCtx.stroke();
+
+      // Center rib diagonal sipes (half-pitch staggered)
+      cCtx.lineWidth = 4.5;
+      bCtx.lineWidth = 4.5;
+      cCtx.beginPath();
+      cCtx.moveTo(x + pitchW * 0.2, H * 0.44);
+      cCtx.lineTo(x + pitchW * 0.6, H * 0.56);
+      cCtx.stroke();
+      bCtx.beginPath();
+      bCtx.moveTo(x + pitchW * 0.2, H * 0.44);
+      bCtx.lineTo(x + pitchW * 0.6, H * 0.56);
+      bCtx.stroke();
+
+      // Inner right & outer right mirrored angled slots
+      cCtx.lineWidth = 6.5;
+      bCtx.lineWidth = 6.5;
+      cCtx.beginPath();
+      cCtx.moveTo(x + pitchW * 0.65, H * 0.57);
+      cCtx.lineTo(x + pitchW * 0.28, H * 0.69);
+      cCtx.stroke();
+      bCtx.beginPath();
+      bCtx.moveTo(x + pitchW * 0.65, H * 0.57);
+      bCtx.lineTo(x + pitchW * 0.28, H * 0.69);
+      bCtx.stroke();
+
+      cCtx.beginPath();
+      cCtx.moveTo(x + pitchW * 0.45, H * 0.69);
+      cCtx.lineTo(x, H * 0.82);
+      cCtx.stroke();
+      bCtx.beginPath();
+      bCtx.moveTo(x + pitchW * 0.45, H * 0.69);
+      bCtx.lineTo(x, H * 0.82);
+      bCtx.stroke();
+    }
+  }
+
+  const map = new THREE.CanvasTexture(colorCanvas);
+  map.wrapS = THREE.RepeatWrapping;
+  map.colorSpace = THREE.SRGBColorSpace;
+
+  const bumpMap = new THREE.CanvasTexture(bumpCanvas);
+  bumpMap.wrapS = THREE.RepeatWrapping;
 
   return { map, bumpMap };
 }
@@ -141,23 +299,23 @@ function AlloyWheel({
   position,
   isLeft,
   tireGeometry,
+  tireMaterial,
   spokeMachinedGeo,
   spokeAccentGeo,
 }: {
   position: [number, number, number];
   isLeft: boolean;
   tireGeometry: THREE.BufferGeometry;
+  tireMaterial: THREE.MeshStandardMaterial;
   spokeMachinedGeo: THREE.BufferGeometry;
   spokeAccentGeo: THREE.BufferGeometry;
 }) {
   const dir = isLeft ? 1 : -1;
   return (
     <group position={position}>
-      {/* Sculpted rounded-profile rubber tire */}
-      <mesh geometry={tireGeometry} castShadow receiveShadow>
-        <meshStandardMaterial color="#15181e" roughness={0.86} metalness={0.04} />
-      </mesh>
-      {/* Open-ended gloss-black inner alloy rim barrel so geometric spokes & brake disc show clearly! */}
+      {/* Sculpted rubber tire with 3D tread channels + procedural tread-block bump map */}
+      <mesh geometry={tireGeometry} material={tireMaterial} castShadow receiveShadow />
+      {/* Open-ended gloss-black inner alloy rim barrel */}
       <mesh position={[dir * 0.005, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
         <cylinderGeometry args={[0.208, 0.208, 0.19, 32, 1, true]} />
         <meshStandardMaterial color="#0b101b" metalness={0.55} roughness={0.38} side={THREE.DoubleSide} />
@@ -192,11 +350,9 @@ function AlloyWheel({
         const angle = (i * Math.PI * 2) / 5;
         return (
           <group key={i} rotation={[angle, 0, 0]}>
-            {/* Bright CNC diamond-cut angular Y-spoke */}
             <mesh position={[dir * 0.102, 0, 0]} geometry={spokeMachinedGeo}>
               <meshStandardMaterial color="#eef2f6" metalness={0.95} roughness={0.13} />
             </mesh>
-            {/* Dark gunmetal recessed geometric aero-blade between Y-spokes */}
             <mesh position={[dir * 0.092, 0, 0]} geometry={spokeAccentGeo}>
               <meshStandardMaterial color="#2c3a4f" metalness={0.82} roughness={0.24} />
             </mesh>
@@ -249,11 +405,11 @@ function WheelWellHousing({ position, side }: { position: [number, number, numbe
 
 /**
  * Sculpted Modern Japanese Minivan Body Shell:
- * - Authentic ~2/3 body & frame to ~1/3 glass proportions (raised beltline, substantial pillars & roof cant rail)
- * - Swept-back, dihedral-angled ("ハの字") aerodynamic side mirrors
- * - Modern complex parametric front grille with fine honeycomb mesh + 3D faceted satin-chrome block matrix
- * - Modern geometric diamond-cut multi-spoke alloy wheels
- * - Left-side sliding doorway cutout with curved weatherstrip, 6mm shut line, & recessed center slide rail
+ * - Seamless unified roof + cant rails + windshield/rear headers (0mm gaps/steps)
+ * - Clean front/rear wheel clearance (frontAxleZ = 1.50m, rearAxleZ = -1.44m)
+ * - 3D tread-grooved tires + modern geometric diamond-cut alloy wheels
+ * - Refined compact honeycomb+stud grille & bold wrap-around multi-projector LED headlights
+ * - Richly detailed lower rear tailgate (emblem, plate pocket, red reflectors, aero diffuser fins, chrome finishers)
  */
 export function MinivanBody() {
   const bodyColorId = useDoorStore((s) => s.bodyColorId);
@@ -266,6 +422,7 @@ export function MinivanBody() {
 
   const plateTexture = useMemo(() => createLicensePlateTexture(), []);
   const grilleMeshTex = useMemo(() => createGrilleMeshTextures(), []);
+  const tireTex = useMemo(() => createTireTextures(), []);
 
   // ===================== SHARED AUTOMOTIVE PBR MATERIALS =====================
   const paintMaterial = useMemo(
@@ -291,6 +448,18 @@ export function MinivanBody() {
         clearcoatRoughness: 0.04,
       }),
     [colorSpec]
+  );
+
+  const tireMaterial = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        map: tireTex.map,
+        bumpMap: tireTex.bumpMap,
+        bumpScale: 0.022,
+        roughness: 0.88,
+        metalness: 0.04,
+      }),
+    [tireTex]
   );
 
   const chromeMaterial = useMemo(
@@ -407,6 +576,18 @@ export function MinivanBody() {
     []
   );
 
+  const reflectorMaterial = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: '#b91c1c',
+        emissive: '#7f1d1d',
+        emissiveIntensity: 0.18,
+        roughness: 0.22,
+        metalness: 0.25,
+      }),
+    []
+  );
+
   useFrame(() => {
     const on = liveSim.hazardOn;
     hazardMaterial.emissiveIntensity = on ? 5.2 : 0.05;
@@ -433,15 +614,17 @@ export function MinivanBody() {
 
     const fenderTopY = (z: number) => (z >= 1.44 ? hoodEdgeY(z) : frontBeltlineY(z));
 
-    // Tapered modern trapezoidal grille boundary u(v) for v in [0 (bottom), 1 (top)]
-    const grilleHalfU = (v: number) => 0.54 + 0.14 * v;
+    // Compact refined trapezoidal grille boundary u(v) for v in [0 (bottom), 1 (top)]
+    const grilleHalfU = (v: number) => 0.42 + 0.11 * v;
+    const pillarTopY = VEHICLE_DIMS.windowTopY + 0.003; // tucks flush beneath unified roof cant rail without overlapping
 
     return {
-      // Major lofted shells
+      // Major unified shells (seamless roof + cant rails + windshield/rear headers!)
       frontNose: createFrontNoseGeometry(),
       roof: createSculptedRoofGeometry(),
-      windshield: createCurvedWindshieldGeometry(0.012, 0.052),
+      windshield: createCurvedWindshieldGeometry(0.012, 0.05),
       windshieldHeader: createWindshieldHeaderGeometry(),
+      rearWindowTopHeader: createRearHeaderGeometry(),
       aPillarL: createAPillarGeometry(1),
       aPillarR: createAPillarGeometry(-1),
       rearTailgate: createRearTailgateGeometry(),
@@ -453,77 +636,76 @@ export function MinivanBody() {
       sharkFin: createSharkFinGeometry(),
       handleBar: createRoundedBoxGeometry(0.026, 0.032, 0.165, 0.008, 3),
 
-      // ===== MODERN COMPLEX PARAMETRIC MESH FRONT GRILLE & WRAP-AROUND LED HEADLIGHTS =====
-      // Trapezoidal honeycomb mesh grille core
+      // ===== REFINED COMPACT MESH GRILLE + LARGER MULTI-PROJECTOR WRAP-AROUND HEADLIGHTS =====
       grilleMeshBacking: createFlushFrontStripGeometry(
         (v) => -grilleHalfU(v),
         (v) => grilleHalfU(v),
-        0.47,
-        0.885,
+        0.5,
+        0.855,
         0.009,
         0.018,
-        20,
+        18,
         8
       ),
-      // 3D dimensional parametric staggered jewel-block chrome matrix floating on mesh!
       grilleStuds: createParametricGrilleStudsGeometry(),
-      // Swept upper chrome brow garnish uniting the two headlights
-      grilleTopChrome: createFlushFrontStripGeometry(-0.78, 0.78, 0.882, 0.916, 0.015, 0.014, 22, 2),
-      // Left & right angled chrome side-surround blades framing the trapezoidal grille
+      grilleTopChrome: createFlushFrontStripGeometry(-0.53, 0.53, 0.854, 0.888, 0.015, 0.014, 18, 2),
       grilleBorderL: createFlushFrontStripGeometry(
-        (v) => grilleHalfU(v) - 0.012,
-        (v) => grilleHalfU(v) + 0.036,
-        0.465,
-        0.89,
+        (v) => grilleHalfU(v) - 0.01,
+        (v) => grilleHalfU(v) + 0.034,
+        0.495,
+        0.86,
         0.014,
         0.014,
         4,
         10
       ),
       grilleBorderR: createFlushFrontStripGeometry(
-        (v) => -(grilleHalfU(v) + 0.036),
-        (v) => -(grilleHalfU(v) - 0.012),
-        0.465,
-        0.89,
+        (v) => -(grilleHalfU(v) + 0.034),
+        (v) => -(grilleHalfU(v) - 0.01),
+        0.495,
+        0.86,
         0.014,
         0.014,
         4,
         10
       ),
-      // Lower chrome grille chin lip
-      grilleBottomChrome: createFlushFrontStripGeometry(-0.56, 0.56, 0.455, 0.478, 0.014, 0.012, 16, 2),
-      // Lower bumper mesh air dam
-      lowerIntakeMesh: createFlushFrontStripGeometry(-0.56, 0.56, 0.27, 0.40, 0.008, 0.016, 16, 4),
-      // Sculpted vertical side air-curtain intakes + chrome L-blades
-      fogBezelL: createFlushFrontStripGeometry(0.66, 0.90, 0.295, 0.455, 0.009, 0.014, 8, 5),
-      fogBezelR: createFlushFrontStripGeometry(-0.90, -0.66, 0.295, 0.455, 0.009, 0.014, 8, 5),
+      grilleBottomChrome: createFlushFrontStripGeometry(-0.44, 0.44, 0.484, 0.506, 0.014, 0.012, 14, 2),
+      lowerIntakeMesh: createFlushFrontStripGeometry(-0.56, 0.56, 0.27, 0.4, 0.008, 0.016, 16, 4),
+      fogBezelL: createFlushFrontStripGeometry(0.66, 0.9, 0.295, 0.455, 0.009, 0.014, 8, 5),
+      fogBezelR: createFlushFrontStripGeometry(-0.9, -0.66, 0.295, 0.455, 0.009, 0.014, 8, 5),
       fogAccentL: createFlushFrontStripGeometry(0.68, 0.86, 0.435, 0.455, 0.014, 0.01, 6, 2),
       fogAccentR: createFlushFrontStripGeometry(-0.86, -0.68, 0.435, 0.455, 0.014, 0.01, 6, 2),
 
-      // Flush wrap-around front headlights (front fascia face + fender side wrap!)
-      hlHousingL: createFlushFrontStripGeometry(0.66, 1.0, 0.80, 0.92, 0.009, 0.016, 12, 5),
-      hlHousingR: createFlushFrontStripGeometry(-1.0, -0.66, 0.80, 0.92, 0.009, 0.016, 12, 5),
-      hlSideWingL: createHeadlightSideWingGeometry(1, 0.80, 0.92, 1.92, 0.007),
-      hlSideWingR: createHeadlightSideWingGeometry(-1, 0.80, 0.92, 1.92, 0.007),
-      hlDrlTopL: createFlushFrontStripGeometry(0.67, 0.99, 0.888, 0.91, 0.015, 0.01, 10, 2),
-      hlDrlTopR: createFlushFrontStripGeometry(-0.99, -0.67, 0.888, 0.91, 0.015, 0.01, 10, 2),
-      hlDrlBotL: createFlushFrontStripGeometry(0.69, 0.96, 0.812, 0.83, 0.014, 0.01, 10, 2),
-      hlDrlBotR: createFlushFrontStripGeometry(-0.96, -0.69, 0.812, 0.83, 0.014, 0.01, 10, 2),
-      hlLampCoreL: createFlushFrontStripGeometry(0.70, 0.87, 0.84, 0.878, 0.013, 0.01, 8, 2),
-      hlLampCoreR: createFlushFrontStripGeometry(-0.87, -0.70, 0.84, 0.878, 0.013, 0.01, 8, 2),
-      hlTurnL: createFlushFrontStripGeometry(0.88, 0.99, 0.842, 0.878, 0.015, 0.01, 6, 2),
-      hlTurnR: createFlushFrontStripGeometry(-0.99, -0.88, 0.842, 0.878, 0.015, 0.01, 6, 2),
+      // Larger, bolder wrap-around LED headlights (u = ±0.53 .. ±1.0, y = 0.745 .. 0.916)
+      hlHousingL: createFlushFrontStripGeometry(0.53, 1.0, 0.745, 0.916, 0.009, 0.018, 14, 6),
+      hlHousingR: createFlushFrontStripGeometry(-1.0, -0.53, 0.745, 0.916, 0.009, 0.018, 14, 6),
+      hlSideWingL: createHeadlightSideWingGeometry(1, 0.745, 0.916, 1.84, 0.007),
+      hlSideWingR: createHeadlightSideWingGeometry(-1, 0.745, 0.916, 1.84, 0.007),
+      hlDrlTopL: createFlushFrontStripGeometry(0.55, 0.99, 0.886, 0.91, 0.015, 0.01, 12, 2),
+      hlDrlTopR: createFlushFrontStripGeometry(-0.99, -0.55, 0.886, 0.91, 0.015, 0.01, 12, 2),
+      hlDrlBotL: createFlushFrontStripGeometry(0.56, 0.84, 0.754, 0.774, 0.014, 0.01, 10, 2),
+      hlDrlBotR: createFlushFrontStripGeometry(-0.84, -0.56, 0.754, 0.774, 0.014, 0.01, 10, 2),
+      hlTurnL: createFlushFrontStripGeometry(0.84, 0.99, 0.785, 0.875, 0.015, 0.01, 6, 3),
+      hlTurnR: createFlushFrontStripGeometry(-0.99, -0.84, 0.785, 0.875, 0.015, 0.01, 6, 3),
 
-      // ===== FLUSH CURVED REAR FASCIA, THICKER FRAME & VERTICAL LED TAILLIGHTS =====
-      rearDiffuser: createFlushRearStripGeometry(-0.78, 0.78, 0.215, 0.305, 0.007, 0.018, 18, 3),
-      rearGarnishChrome: createFlushRearStripGeometry(-0.56, 0.56, 1.035, 1.072, 0.013, 0.012, 16, 2),
-      // Solid rear window upper spoiler-header frame (y = 1.675..1.755) so rear glass has realistic frame!
-      rearWindowTopHeader: createFlushRearStripGeometry(-1.0, 1.0, 1.675, 1.755, 0.006, 0.025, 18, 4),
-      // Wider sculpted vertical LED taillights framing the rear glass
-      tlHousingL: createFlushRearStripGeometry(0.815, 1.0, 1.155, 1.685, 0.008, 0.024, 6, 12),
-      tlHousingR: createFlushRearStripGeometry(-1.0, -0.815, 1.155, 1.685, 0.008, 0.024, 6, 12),
-      tlBladeL: createFlushRearStripGeometry(0.885, 0.965, 1.30, 1.645, 0.014, 0.012, 4, 10),
-      tlBladeR: createFlushRearStripGeometry(-0.965, -0.885, 1.30, 1.645, 0.014, 0.012, 4, 10),
+      // ===== RICHLY DECORATED LOWER REAR TAILGATE, BUMPER & TAILLIGHTS =====
+      rearPlateBezel: createFlushRearStripGeometry(-0.32, 0.32, 0.74, 0.94, 0.006, 0.014, 12, 4),
+      rearGarnishChrome: createFlushRearStripGeometry(-0.56, 0.56, 1.03, 1.07, 0.014, 0.012, 16, 2),
+      rearReflectorBezelL: createFlushRearStripGeometry(0.57, 0.85, 0.405, 0.468, 0.007, 0.014, 8, 3),
+      rearReflectorBezelR: createFlushRearStripGeometry(-0.85, -0.57, 0.405, 0.468, 0.007, 0.014, 8, 3),
+      rearReflectorL: createFlushRearStripGeometry(0.59, 0.83, 0.418, 0.456, 0.012, 0.01, 8, 2),
+      rearReflectorR: createFlushRearStripGeometry(-0.83, -0.59, 0.418, 0.456, 0.012, 0.01, 8, 2),
+      rearLowerChromeBlade: createFlushRearStripGeometry(-0.78, 0.78, 0.316, 0.348, 0.014, 0.012, 20, 2),
+      rearDiffuser: createFlushRearStripGeometry(-0.8, 0.8, 0.21, 0.325, 0.008, 0.02, 20, 4),
+      rearExhaustRimL: createFlushRearStripGeometry(0.57, 0.75, 0.232, 0.296, 0.015, 0.014, 6, 3),
+      rearExhaustRimR: createFlushRearStripGeometry(-0.75, -0.57, 0.232, 0.296, 0.015, 0.014, 6, 3),
+      rearExhaustBoreL: createFlushRearStripGeometry(0.595, 0.725, 0.244, 0.284, 0.018, 0.01, 4, 2),
+      rearExhaustBoreR: createFlushRearStripGeometry(-0.725, -0.595, 0.244, 0.284, 0.018, 0.01, 4, 2),
+
+      tlHousingL: createFlushRearStripGeometry(0.815, 1.0, 1.155, 1.675, 0.008, 0.024, 6, 12),
+      tlHousingR: createFlushRearStripGeometry(-1.0, -0.815, 1.155, 1.675, 0.008, 0.024, 6, 12),
+      tlBladeL: createFlushRearStripGeometry(0.885, 0.965, 1.3, 1.64, 0.014, 0.012, 4, 10),
+      tlBladeR: createFlushRearStripGeometry(-0.965, -0.885, 1.3, 1.64, 0.014, 0.012, 4, 10),
       tlReverseL: createFlushRearStripGeometry(0.885, 0.965, 1.24, 1.286, 0.014, 0.012, 4, 3),
       tlReverseR: createFlushRearStripGeometry(-0.965, -0.885, 1.24, 1.286, 0.014, 0.012, 4, 3),
       tlTurnL: createFlushRearStripGeometry(0.885, 0.965, 1.172, 1.228, 0.014, 0.012, 4, 4),
@@ -533,7 +715,7 @@ export function MinivanBody() {
         zMin: -2.18,
         zMax: -2.02,
         yMin: 1.155,
-        yMax: 1.67,
+        yMax: 1.665,
         zMinAtY: (y) => dPillarRearZ(y) - 0.004,
         zMaxAtY: (y) => dPillarRearZ(y) + 0.055,
         xOffset: 0.007,
@@ -546,7 +728,7 @@ export function MinivanBody() {
         zMin: -2.18,
         zMax: -2.02,
         yMin: 1.155,
-        yMax: 1.67,
+        yMax: 1.665,
         zMinAtY: (y) => dPillarRearZ(y) - 0.004,
         zMaxAtY: (y) => dPillarRearZ(y) + 0.055,
         xOffset: 0.007,
@@ -555,10 +737,10 @@ export function MinivanBody() {
         cols: 3,
       }),
 
-      // ===== LEFT SIDE (+X) PANELS WITH HIGHER BELTLINE & SUBSTANTIAL FRAMES =====
+      // ===== LEFT SIDE (+X) PANELS — ZERO TIRE OVERLAP, ZERO CANT-RAIL SEAM =====
       leftFrontFender: createCurvedSidePanel({
         side: 1,
-        zMin: 1.18,
+        zMin: 1.124,
         zMax: 2.165,
         yMin: VEHICLE_DIMS.sillBottomY,
         yMax: fenderTopY,
@@ -567,12 +749,12 @@ export function MinivanBody() {
         thickness: 0.042,
         characterCrease: true,
         rows: 16,
-        cols: 30,
+        cols: 32,
       }),
       leftFrontDoorLower: createCurvedSidePanel({
         side: 1,
         zMin: 0.222,
-        zMax: 1.176,
+        zMax: 1.12,
         yMin: VEHICLE_DIMS.doorBottomY,
         yMax: frontBeltlineY,
         thickness: 0.042,
@@ -580,11 +762,10 @@ export function MinivanBody() {
         rows: 14,
         cols: 16,
       }),
-      // Front side glass sized to realistic height (beltline ~1.15 -> 1.685) & tucked inside wider A/B pillars!
       leftFrontWindowGlass: createCurvedSidePanel({
         side: 1,
         zMin: 0.322,
-        zMax: 1.40,
+        zMax: 1.4,
         yMin: frontBeltlineY,
         yMax: VEHICLE_DIMS.windowTopY,
         zMinAtY: () => 0.322,
@@ -594,7 +775,6 @@ export function MinivanBody() {
         rows: 14,
         cols: 14,
       }),
-      // Vertical black mullion separating triangular front quarter window & front door glass
       leftQuarterDivider: createCurvedSidePanel({
         side: 1,
         zMin: 1.076,
@@ -619,8 +799,8 @@ export function MinivanBody() {
       }),
       leftLowerSill: createCurvedSidePanel({
         side: 1,
-        zMin: -1.075,
-        zMax: 1.18,
+        zMin: -0.844,
+        zMax: 1.12,
         yMin: 0.205,
         yMax: 0.342,
         thickness: 0.065,
@@ -629,8 +809,8 @@ export function MinivanBody() {
       }),
       leftRockerAeroSkirt: createCurvedSidePanel({
         side: 1,
-        zMin: -1.07,
-        zMax: 1.08,
+        zMin: -1.04,
+        zMax: 1.1,
         yMin: 0.192,
         yMax: 0.24,
         xOffset: 0.008,
@@ -638,14 +818,13 @@ export function MinivanBody() {
         rows: 4,
         cols: 12,
       }),
-      // Wider, realistic B-pillar blackout frame (10.6cm)
       leftBPillarUpper: createCurvedSidePanel({
         side: 1,
         zMin: 0.222,
         zMax: 0.328,
         yMin: 1.145,
-        yMax: 1.756,
-        xOffset: 0.002,
+        yMax: pillarTopY,
+        xOffset: 0.001,
         thickness: 0.044,
         rows: 12,
         cols: 3,
@@ -666,32 +845,19 @@ export function MinivanBody() {
         zMin: 0.202,
         zMax: 0.255,
         yMin: 1.148,
-        yMax: 1.745,
+        yMax: VEHICLE_DIMS.windowTopY,
         xOffset: -0.022,
         thickness: 0.042,
         rows: 10,
         cols: 2,
       }),
-      // Substantial 8cm painted/two-tone upper roof cant rail framing the top of all side windows!
-      leftRoofCantRail: createCurvedSidePanel({
-        side: 1,
-        zMin: -2.14,
-        zMax: 0.87,
-        yMin: VEHICLE_DIMS.windowTopY,
-        yMax: 1.766,
-        xOffset: 0.002,
-        thickness: 0.052,
-        rows: 5,
-        cols: 24,
-      }),
 
-      // Curved weatherstrip seals around the open sliding doorway
       sealFront: createCurvedSidePanel({
         side: 1,
         zMin: 0.206,
         zMax: 0.226,
         yMin: 0.34,
-        yMax: 1.72,
+        yMax: 1.7,
         xOffset: -0.026,
         thickness: 0.024,
         rows: 16,
@@ -703,7 +869,7 @@ export function MinivanBody() {
         zMin: -0.854,
         zMax: -0.834,
         yMin: 0.34,
-        yMax: 1.72,
+        yMax: 1.7,
         xOffset: -0.026,
         thickness: 0.024,
         rows: 16,
@@ -714,8 +880,8 @@ export function MinivanBody() {
         side: 1,
         zMin: -0.848,
         zMax: 0.22,
-        yMin: 1.705,
-        yMax: 1.725,
+        yMin: 1.685,
+        yMax: 1.705,
         xOffset: -0.024,
         thickness: 0.024,
         rows: 2,
@@ -735,7 +901,6 @@ export function MinivanBody() {
         usePlanTaper: false,
       }),
 
-      // Left Rear Quarter Panel seamlessly meeting rearCornerZ(y) + split along recessed center rail!
       leftRearQuarterBelowRail: createCurvedSidePanel({
         side: 1,
         zMin: -2.18,
@@ -783,14 +948,13 @@ export function MinivanBody() {
         cols: 16,
         usePlanTaper: false,
       }),
-      // Wider C-pillar (10.1cm) & wider D-pillar (21cm) for solid modern minivan greenhouse balance
       leftCPillarUpper: createCurvedSidePanel({
         side: 1,
         zMin: -0.945,
         zMax: -0.844,
         yMin: 1.148,
-        yMax: 1.756,
-        xOffset: 0.002,
+        yMax: pillarTopY,
+        xOffset: 0.001,
         thickness: 0.044,
         rows: 12,
         cols: 3,
@@ -813,10 +977,10 @@ export function MinivanBody() {
         zMin: -2.18,
         zMax: -1.86,
         yMin: 1.148,
-        yMax: 1.756,
+        yMax: pillarTopY,
         zMinAtY: (y) => dPillarRearZ(y) - 0.004,
         zMaxAtY: (y) => dPillarRearZ(y) + 0.218,
-        xOffset: 0.002,
+        xOffset: 0.001,
         thickness: 0.045,
         rows: 12,
         cols: 4,
@@ -836,7 +1000,7 @@ export function MinivanBody() {
       // ===== RIGHT SIDE (-X) FULL ENCLOSED SYMMETRIC BODY =====
       rightFrontFender: createCurvedSidePanel({
         side: -1,
-        zMin: 1.18,
+        zMin: 1.124,
         zMax: 2.165,
         yMin: VEHICLE_DIMS.sillBottomY,
         yMax: fenderTopY,
@@ -845,12 +1009,12 @@ export function MinivanBody() {
         thickness: 0.042,
         characterCrease: true,
         rows: 16,
-        cols: 30,
+        cols: 32,
       }),
       rightCabinLowerBody: createCurvedSidePanel({
         side: -1,
         zMin: -0.844,
-        zMax: 1.18,
+        zMax: 1.12,
         yMin: VEHICLE_DIMS.sillBottomY,
         yMax: frontBeltlineY,
         thickness: 0.045,
@@ -874,7 +1038,7 @@ export function MinivanBody() {
       rightFrontWindowGlass: createCurvedSidePanel({
         side: -1,
         zMin: 0.322,
-        zMax: 1.40,
+        zMax: 1.4,
         yMin: frontBeltlineY,
         yMax: VEHICLE_DIMS.windowTopY,
         zMinAtY: () => 0.322,
@@ -913,8 +1077,8 @@ export function MinivanBody() {
         zMin: 0.222,
         zMax: 0.328,
         yMin: 1.145,
-        yMax: 1.756,
-        xOffset: 0.002,
+        yMax: pillarTopY,
+        xOffset: 0.001,
         thickness: 0.044,
         rows: 12,
         cols: 3,
@@ -924,8 +1088,8 @@ export function MinivanBody() {
         zMin: -0.945,
         zMax: -0.844,
         yMin: 1.148,
-        yMax: 1.756,
-        xOffset: 0.002,
+        yMax: pillarTopY,
+        xOffset: 0.001,
         thickness: 0.044,
         rows: 12,
         cols: 3,
@@ -935,24 +1099,13 @@ export function MinivanBody() {
         zMin: -2.18,
         zMax: -1.86,
         yMin: 1.148,
-        yMax: 1.756,
+        yMax: pillarTopY,
         zMinAtY: (y) => dPillarRearZ(y) - 0.004,
         zMaxAtY: (y) => dPillarRearZ(y) + 0.218,
-        xOffset: 0.002,
+        xOffset: 0.001,
         thickness: 0.045,
         rows: 12,
         cols: 4,
-      }),
-      rightRoofCantRail: createCurvedSidePanel({
-        side: -1,
-        zMin: -2.14,
-        zMax: 0.87,
-        yMin: VEHICLE_DIMS.windowTopY,
-        yMax: 1.766,
-        xOffset: 0.002,
-        thickness: 0.052,
-        rows: 5,
-        cols: 24,
       }),
       rightBeltChrome: createCurvedSidePanel({
         side: -1,
@@ -967,8 +1120,8 @@ export function MinivanBody() {
       }),
       rightRockerAeroSkirt: createCurvedSidePanel({
         side: -1,
-        zMin: -1.07,
-        zMax: 1.08,
+        zMin: -1.04,
+        zMax: 1.1,
         yMin: 0.192,
         yMax: 0.24,
         xOffset: 0.008,
@@ -986,20 +1139,21 @@ export function MinivanBody() {
   }, []);
 
   const frontEmblemPos = useMemo(() => frontFasciaPoint(0, 0.745, 0.022), []);
-  const frontPlatePos = useMemo(() => frontFasciaPoint(0, 0.455, 0.02), []);
+  const frontPlatePos = useMemo(() => frontFasciaPoint(0, 0.435, 0.02), []);
   const rearPlatePos = useMemo(() => rearFasciaPoint(0, 0.84, 0.014), []);
+  const rearEmblemPos = useMemo(() => rearFasciaPoint(0, 1.095, 0.015), []);
 
   return (
     <group>
       {/* ===================== UNDERBODY & CHASSIS ===================== */}
       <mesh position={[0, 0.22, -0.02]} castShadow receiveShadow>
-        <boxGeometry args={[1.38, 0.1, 4.02]} />
+        <boxGeometry args={[1.14, 0.1, 3.96]} />
         <meshStandardMaterial color="#0d1118" roughness={0.92} />
       </mesh>
-      <WheelWellHousing position={[0.68, 0.33, VEHICLE_DIMS.frontAxleZ]} side={1} />
-      <WheelWellHousing position={[-0.68, 0.33, VEHICLE_DIMS.frontAxleZ]} side={-1} />
-      <WheelWellHousing position={[0.68, 0.33, VEHICLE_DIMS.rearAxleZ]} side={1} />
-      <WheelWellHousing position={[-0.68, 0.33, VEHICLE_DIMS.rearAxleZ]} side={-1} />
+      <WheelWellHousing position={[0.66, 0.33, VEHICLE_DIMS.frontAxleZ]} side={1} />
+      <WheelWellHousing position={[-0.66, 0.33, VEHICLE_DIMS.frontAxleZ]} side={-1} />
+      <WheelWellHousing position={[0.66, 0.33, VEHICLE_DIMS.rearAxleZ]} side={1} />
+      <WheelWellHousing position={[-0.66, 0.33, VEHICLE_DIMS.rearAxleZ]} side={-1} />
 
       {/* ===================== SCULPTED FRONT NOSE, HOOD & BUMPER ===================== */}
       <mesh geometry={geos.frontNose} material={paintMaterial} castShadow receiveShadow />
@@ -1015,7 +1169,7 @@ export function MinivanBody() {
         <boxGeometry args={[0.5, 0.014, 0.016]} />
       </mesh>
 
-      {/* Modern Complex Honeycomb Mesh + Parametric 3D Stud Front Grille */}
+      {/* Modern Compact Honeycomb Mesh + Parametric 3D Stud Front Grille */}
       <mesh geometry={geos.grilleMeshBacking} material={grilleMeshMaterial} />
       <mesh geometry={geos.grilleStuds} material={satinChromeMaterial} />
       <mesh geometry={geos.grilleTopChrome} material={chromeMaterial} />
@@ -1030,14 +1184,14 @@ export function MinivanBody() {
 
       {/* Center Front Chrome Emblem */}
       <mesh position={frontEmblemPos} rotation={[Math.PI / 2, 0, 0]} material={chromeMaterial}>
-        <cylinderGeometry args={[0.068, 0.072, 0.018, 28]} />
+        <cylinderGeometry args={[0.066, 0.07, 0.018, 28]} />
       </mesh>
       <mesh
         position={[frontEmblemPos.x, frontEmblemPos.y, frontEmblemPos.z + 0.006]}
         rotation={[Math.PI / 2, 0, 0]}
         material={glossBlackMaterial}
       >
-        <cylinderGeometry args={[0.054, 0.054, 0.012, 24]} />
+        <cylinderGeometry args={[0.052, 0.052, 0.012, 24]} />
       </mesh>
 
       {/* Front Japanese License Plate */}
@@ -1046,7 +1200,7 @@ export function MinivanBody() {
         <meshStandardMaterial map={plateTexture} roughness={0.35} />
       </mesh>
 
-      {/* Flush Contoured Wrap-Around LED Headlights & Turn Signals (Left + Right) */}
+      {/* Larger Bold Wrap-Around Multi-Projector LED Headlights & Turn Signals (Left + Right) */}
       <mesh geometry={geos.hlHousingL} material={glossBlackMaterial} />
       <mesh geometry={geos.hlHousingR} material={glossBlackMaterial} />
       <mesh geometry={geos.hlSideWingL} material={glossBlackMaterial} />
@@ -1055,21 +1209,38 @@ export function MinivanBody() {
       <mesh geometry={geos.hlDrlTopR} material={headlightMaterial} />
       <mesh geometry={geos.hlDrlBotL} material={headlightMaterial} />
       <mesh geometry={geos.hlDrlBotR} material={headlightMaterial} />
-      <mesh geometry={geos.hlLampCoreL} material={headlightMaterial} />
-      <mesh geometry={geos.hlLampCoreR} material={headlightMaterial} />
       <mesh geometry={geos.hlTurnL} material={hazardMaterial} />
       <mesh geometry={geos.hlTurnR} material={hazardMaterial} />
+      {/* Prominent Twin Recessed LED Projector Lenses per Headlight */}
+      {[1, -1].map((side) =>
+        [0.63, 0.755].map((uVal, pIdx) => {
+          const pos = frontFasciaPoint(side * uVal, 0.835, 0.016);
+          return (
+            <group
+              key={`proj-${side}-${pIdx}`}
+              position={pos}
+              rotation={[0, side * (0.18 + pIdx * 0.16), 0]}
+            >
+              <mesh rotation={[Math.PI / 2, 0, 0]} material={chromeMaterial}>
+                <torusGeometry args={[0.032, 0.0045, 10, 22]} />
+              </mesh>
+              <mesh rotation={[Math.PI / 2, 0, 0]} material={headlightMaterial}>
+                <cylinderGeometry args={[0.027, 0.029, 0.014, 20]} />
+              </mesh>
+            </group>
+          );
+        })
+      )}
 
-      {/* ===================== CURVED WINDSHIELD, HEADER BROW & SUBSTANTIAL A-PILLARS ===================== */}
+      {/* ===================== CURVED WINDSHIELD, SEAMLESS HEADER & A-PILLARS ===================== */}
       <mesh geometry={geos.windshield} material={clearGlassMaterial} />
       <mesh geometry={geos.windshieldHeader} material={roofMaterial} />
       <mesh geometry={geos.aPillarL} material={glossBlackMaterial} castShadow />
       <mesh geometry={geos.aPillarR} material={glossBlackMaterial} castShadow />
 
-      {/* ===================== SMOOTHLY ARCHED ROOF & SHARK-FIN ANTENNA ===================== */}
+      {/* ===================== UNIFIED SEAMLESS ROOF + CANT RAILS & SHARK-FIN ===================== */}
       <mesh geometry={geos.roof} material={roofMaterial} castShadow receiveShadow />
       <mesh position={[0, 1.838, -1.62]} geometry={geos.sharkFin} material={roofMaterial} castShadow />
-      {/* Rear Roof Spoiler High-Mount Red LED Stop Lamp */}
       <mesh position={[0, 1.765, -2.295]} material={taillightMaterial}>
         <boxGeometry args={[0.32, 0.018, 0.016]} />
       </mesh>
@@ -1082,7 +1253,7 @@ export function MinivanBody() {
         <mesh geometry={geos.leftQuarterDivider} material={glossBlackMaterial} />
         <mesh geometry={geos.leftFrontBeltChrome} material={chromeMaterial} />
 
-        {/* Front Door Outer Chrome Handle (raised to match new 1.15m beltline) */}
+        {/* Front Door Outer Chrome Handle */}
         <mesh
           position={[bodySideX(1.015) + 0.016, 1.015, 0.39]}
           geometry={geos.handleBar}
@@ -1090,14 +1261,12 @@ export function MinivanBody() {
           castShadow
         />
 
-        {/* Sculpted Aerodynamic Left Side Mirror — angled backward & tilted in sleek "ハの字"! */}
-        <group position={[bodySideX(1.145) + 0.006, 1.145, 1.07]}>
-          {/* Swept-back upward-angled door stalk */}
-          <mesh position={[0.044, 0.022, -0.016]} rotation={[0, 0.24, 0.48]} material={glossBlackMaterial}>
-            <boxGeometry args={[0.115, 0.036, 0.062]} />
+        {/* Sculpted Aerodynamic Left Side Mirror — angled backward & tilted in sleek "ハの字" */}
+        <group position={[bodySideX(1.145) - 0.01, 1.145, 1.07]}>
+          <mesh position={[0.052, 0.022, -0.016]} rotation={[0, 0.24, 0.48]} material={glossBlackMaterial}>
+            <boxGeometry args={[0.125, 0.036, 0.062]} />
           </mesh>
-          {/* Mirror cap swept rearward (+ry) with sleek subtle upward/outward dihedral (+rz) */}
-          <group position={[0.126, 0.056, -0.038]} rotation={[0.04, 0.34, 0.16]}>
+          <group position={[0.142, 0.056, -0.038]} rotation={[0.04, 0.34, 0.16]}>
             <mesh geometry={geos.mirrorCap} material={roofMaterial} castShadow />
             <mesh position={[0, 0, -0.062]} rotation={[0, Math.PI, 0]}>
               <planeGeometry args={[0.145, 0.082]} />
@@ -1117,10 +1286,9 @@ export function MinivanBody() {
           <boxGeometry args={[0.03, 0.06, 0.018]} />
         </mesh>
 
-        {/* Lower Side Sill, Aero Rocker Skirt & Substantial Roof Cant Rail */}
+        {/* Lower Side Sill & Aero Rocker Skirt */}
         <mesh geometry={geos.leftLowerSill} material={paintMaterial} castShadow receiveShadow />
         <mesh geometry={geos.leftRockerAeroSkirt} material={matteRubberMaterial} />
-        <mesh geometry={geos.leftRoofCantRail} material={roofMaterial} castShadow />
 
         {/* Curved Weatherstrip Gasket around Sliding Doorway */}
         <mesh geometry={geos.sealFront} material={matteRubberMaterial} />
@@ -1166,18 +1334,17 @@ export function MinivanBody() {
         <mesh geometry={geos.rightBPillarUpper} material={glossBlackMaterial} />
         <mesh geometry={geos.rightCPillarUpper} material={glossBlackMaterial} />
         <mesh geometry={geos.rightDPillarUpper} material={glossBlackMaterial} />
-        <mesh geometry={geos.rightRoofCantRail} material={roofMaterial} />
         <mesh geometry={geos.rightBeltChrome} material={chromeMaterial} />
         <mesh geometry={geos.rightRockerAeroSkirt} material={matteRubberMaterial} />
         <mesh geometry={geos.flareFR} material={paintMaterial} />
         <mesh geometry={geos.flareRR} material={paintMaterial} />
 
-        {/* Right Side Aerodynamic Mirror — symmetric swept-back "ハの字"! */}
-        <group position={[-(bodySideX(1.145) + 0.006), 1.145, 1.07]}>
-          <mesh position={[-0.044, 0.022, -0.016]} rotation={[0, -0.24, -0.48]} material={glossBlackMaterial}>
-            <boxGeometry args={[0.115, 0.036, 0.062]} />
+        {/* Right Side Aerodynamic Mirror — symmetric swept-back "ハの字" */}
+        <group position={[-(bodySideX(1.145) - 0.01), 1.145, 1.07]}>
+          <mesh position={[-0.052, 0.022, -0.016]} rotation={[0, -0.24, -0.48]} material={glossBlackMaterial}>
+            <boxGeometry args={[0.125, 0.036, 0.062]} />
           </mesh>
-          <group position={[-0.126, 0.056, -0.038]} rotation={[0.04, -0.34, -0.16]}>
+          <group position={[-0.142, 0.056, -0.038]} rotation={[0.04, -0.34, -0.16]}>
             <mesh geometry={geos.mirrorCap} material={roofMaterial} scale={[-1, 1, 1]} castShadow />
             <mesh position={[0, 0, -0.062]} rotation={[0, Math.PI, 0]}>
               <planeGeometry args={[0.145, 0.082]} />
@@ -1202,15 +1369,27 @@ export function MinivanBody() {
         />
       </group>
 
-      {/* ===================== SCULPTED REAR TAILGATE, GLASS & FLUSH VERTICAL LED TAILLIGHTS ===================== */}
+      {/* ===================== SCULPTED REAR TAILGATE, DECORATED BUMPER & TAILLIGHTS ===================== */}
       <group>
         <mesh geometry={geos.rearTailgate} material={paintMaterial} castShadow receiveShadow />
         <mesh geometry={geos.rearGlass} material={privacyGlassMaterial} />
         <mesh geometry={geos.rearWindowTopHeader} material={roofMaterial} />
-        <mesh geometry={geos.rearDiffuser} material={matteRubberMaterial} />
-        <mesh geometry={geos.rearGarnishChrome} material={chromeMaterial} />
 
-        {/* Rear Japanese License Plate */}
+        {/* Upper Tailgate Chrome Garnish & Centered Rear Emblem */}
+        <mesh geometry={geos.rearGarnishChrome} material={chromeMaterial} />
+        <mesh position={rearEmblemPos} rotation={[Math.PI / 2, 0, 0]} material={chromeMaterial}>
+          <cylinderGeometry args={[0.046, 0.05, 0.014, 24]} />
+        </mesh>
+        <mesh
+          position={[rearEmblemPos.x, rearEmblemPos.y, rearEmblemPos.z - 0.005]}
+          rotation={[Math.PI / 2, 0, 0]}
+          material={glossBlackMaterial}
+        >
+          <cylinderGeometry args={[0.036, 0.036, 0.01, 20]} />
+        </mesh>
+
+        {/* Recessed License Plate Pocket Bezel + Japanese License Plate */}
+        <mesh geometry={geos.rearPlateBezel} material={glossBlackMaterial} />
         <mesh position={rearPlatePos} rotation={[0, Math.PI, 0]}>
           <planeGeometry args={[0.33, 0.165]} />
           <meshStandardMaterial map={plateTexture} roughness={0.35} />
@@ -1220,6 +1399,26 @@ export function MinivanBody() {
         <mesh position={[0.11, 1.195, -2.28]} rotation={[0, 0, -0.08]} material={matteRubberMaterial}>
           <boxGeometry args={[0.32, 0.018, 0.018]} />
         </mesh>
+
+        {/* Lower Rear Bumper Decorations: Red Reflectors, Satin Chrome Blade, Diffuser Fins & Dual Chrome Finishers */}
+        <mesh geometry={geos.rearReflectorBezelL} material={glossBlackMaterial} />
+        <mesh geometry={geos.rearReflectorBezelR} material={glossBlackMaterial} />
+        <mesh geometry={geos.rearReflectorL} material={reflectorMaterial} />
+        <mesh geometry={geos.rearReflectorR} material={reflectorMaterial} />
+        <mesh geometry={geos.rearLowerChromeBlade} material={satinChromeMaterial} />
+        <mesh geometry={geos.rearDiffuser} material={matteRubberMaterial} />
+        {[-0.36, -0.18, 0, 0.18, 0.36].map((xFin) => {
+          const finPos = rearFasciaPoint(xFin / 0.8, 0.265, 0.018);
+          return (
+            <mesh key={`fin-${xFin}`} position={finPos} material={glossBlackMaterial}>
+              <boxGeometry args={[0.016, 0.088, 0.03]} />
+            </mesh>
+          );
+        })}
+        <mesh geometry={geos.rearExhaustRimL} material={chromeMaterial} />
+        <mesh geometry={geos.rearExhaustRimR} material={chromeMaterial} />
+        <mesh geometry={geos.rearExhaustBoreL} material={glossBlackMaterial} />
+        <mesh geometry={geos.rearExhaustBoreR} material={glossBlackMaterial} />
 
         {/* Flush Wrap-Around Vertical Slim LED Taillights (Left + Right) */}
         <mesh geometry={geos.tlHousingL} material={glossBlackMaterial} />
@@ -1238,32 +1437,36 @@ export function MinivanBody() {
         <mesh geometry={geos.tlTurnR} material={hazardMaterial} />
       </group>
 
-      {/* ===================== 4 MODERN GEOMETRIC ALLOY WHEELS ===================== */}
+      {/* ===================== 4 MODERN GEOMETRIC ALLOY WHEELS + GROOVED TIRES ===================== */}
       <AlloyWheel
-        position={[0.745, VEHICLE_DIMS.wheelRadius, VEHICLE_DIMS.frontAxleZ]}
+        position={[0.725, VEHICLE_DIMS.wheelRadius, VEHICLE_DIMS.frontAxleZ]}
         isLeft
         tireGeometry={geos.tire}
+        tireMaterial={tireMaterial}
         spokeMachinedGeo={geos.spokeMachined}
         spokeAccentGeo={geos.spokeAccent}
       />
       <AlloyWheel
-        position={[-0.745, VEHICLE_DIMS.wheelRadius, VEHICLE_DIMS.frontAxleZ]}
+        position={[-0.725, VEHICLE_DIMS.wheelRadius, VEHICLE_DIMS.frontAxleZ]}
         isLeft={false}
         tireGeometry={geos.tire}
+        tireMaterial={tireMaterial}
         spokeMachinedGeo={geos.spokeMachined}
         spokeAccentGeo={geos.spokeAccent}
       />
       <AlloyWheel
-        position={[0.745, VEHICLE_DIMS.wheelRadius, VEHICLE_DIMS.rearAxleZ]}
+        position={[0.725, VEHICLE_DIMS.wheelRadius, VEHICLE_DIMS.rearAxleZ]}
         isLeft
         tireGeometry={geos.tire}
+        tireMaterial={tireMaterial}
         spokeMachinedGeo={geos.spokeMachined}
         spokeAccentGeo={geos.spokeAccent}
       />
       <AlloyWheel
-        position={[-0.745, VEHICLE_DIMS.wheelRadius, VEHICLE_DIMS.rearAxleZ]}
+        position={[-0.725, VEHICLE_DIMS.wheelRadius, VEHICLE_DIMS.rearAxleZ]}
         isLeft={false}
         tireGeometry={geos.tire}
+        tireMaterial={tireMaterial}
         spokeMachinedGeo={geos.spokeMachined}
         spokeAccentGeo={geos.spokeAccent}
       />

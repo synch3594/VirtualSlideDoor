@@ -2,7 +2,10 @@ import * as THREE from 'three';
 
 /**
  * Single source of truth for the minivan's parametric outer shell.
- * Realistic modern Japanese minivan proportions (~2/3 sculpted body & frame, ~1/3 greenhouse glass).
+ * - Seamless continuous roof + side cant rail + windshield/rear headers (0mm step/gap)
+ * - Exact wheel arch clearance (front axle z = +1.50m, rear axle z = -1.44m, zero body-tire clipping)
+ * - Realistic ~2/3 sculpted body & frame to ~1/3 greenhouse glass proportions
+ * - 3D sculpted tire profile with 4 circumferential drainage grooves
  *
  * Coordinate system:
  *  +Y = up (0 = ground)
@@ -11,9 +14,9 @@ import * as THREE from 'three';
  */
 
 export const VEHICLE_DIMS = {
-  /** Wheelbase and wheel positions */
-  frontAxleZ: 1.44,
-  rearAxleZ: -1.43,
+  /** Wheelbase (2.94m) & wheel positions — cleanly clear of front door (z <= 1.12) & rear sill (z >= -0.844) */
+  frontAxleZ: 1.5,
+  rearAxleZ: -1.44,
   wheelRadius: 0.315,
   wheelArchRadius: 0.365,
   wheelArchCenterY: 0.33,
@@ -31,6 +34,7 @@ export const VEHICLE_DIMS = {
   rearBumperZ: -2.30,
   cowlZ: 1.44,
   windshieldTopZ: 0.86,
+  frontDoorFrontZ: 1.12, // safely behind front wheel arch (1.50 - 0.365 = 1.135)
   bPillarCenterZ: 0.26,
   cPillarCenterZ: -0.89,
 
@@ -49,8 +53,8 @@ const SIDE_PROFILE_PTS: ReadonlyArray<[number, number]> = [
   [1.15, 0.836], // raised authentic beltline shoulder
   [1.32, 0.806], // lower greenhouse tumblehome
   [1.52, 0.766], // mid greenhouse tumblehome
-  [1.69, 0.726], // top of window / thick roof cant rail base
-  [1.76, 0.702], // roof rail shoulder
+  [1.685, 0.728], // top of side glass / start of smooth roof shoulder
+  [1.755, 0.702], // roof rail shoulder
   [1.795, 0.674], // roof crown blend
 ];
 
@@ -109,7 +113,7 @@ export function bodySideX(y: number): number {
 export function planWidthScale(z: number): number {
   if (z > 1.18) {
     const t = clamp((z - 1.18) / (2.33 - 1.18), 0, 1);
-    return 1 - 0.03 * t * t - 0.048 * Math.pow(t, 4);
+    return 1 - 0.028 * t * t - 0.046 * Math.pow(t, 4);
   }
   if (z < -1.96) {
     const t = clamp((-1.96 - z) / (2.30 - 1.96), 0, 1);
@@ -127,11 +131,11 @@ export function bodyOuterX(y: number, z: number): number {
  * Exact shared front bumper corner Z(y) where the front fender seamlessly meets the front fascia.
  */
 const FRONT_CORNER_Z_PTS: ReadonlyArray<[number, number]> = [
-  [0.21, 2.06], // sculpted lower chin tuck
-  [0.33, 2.135], // lower bumper corner
-  [0.60, 2.165], // mid bumper corner
-  [0.85, 2.145], // headlight corner level
-  [0.98, 2.09], // hood nose corner
+  [0.21, 2.06],
+  [0.33, 2.135],
+  [0.60, 2.165],
+  [0.85, 2.145],
+  [0.98, 2.09],
 ];
 
 export function frontCornerZ(y: number): number {
@@ -154,11 +158,27 @@ export function rearCornerZ(y: number): number {
 }
 
 /**
- * Exact Z coordinate of the A-pillar / windshield side edge at height y in [1.14, 1.76].
+ * Longitudinal roof shoulder height along Z (from windshield header z=0.86 to rear spoiler z=-2.25).
+ */
+export function roofEdgeYAtZ(z: number): number {
+  if (z > 0.5) {
+    const t = clamp((z - 0.5) / (0.86 - 0.5), 0, 1);
+    return 1.762 - 0.018 * t * t;
+  }
+  if (z < -1.85) {
+    const t = clamp((-1.85 - z) / (2.25 - 1.85), 0, 1);
+    return 1.758 - 0.02 * t * t;
+  }
+  const u = (z + 0.65) / 1.2;
+  return 1.762 + 0.004 * Math.max(0, 1 - u * u);
+}
+
+/**
+ * Exact Z coordinate of the A-pillar / windshield side edge at height y in [1.15, roofEdgeYAtZ(0.86)].
  */
 export function aPillarZ(y: number): number {
   const yBot = 1.15;
-  const yTop = 1.76;
+  const yTop = roofEdgeYAtZ(0.86); // 1.744 — exact meeting point with roof shoulder
   const t = clamp((y - yBot) / (yTop - yBot), 0, 1);
   const zBot = 1.46;
   const zTop = 0.86;
@@ -166,13 +186,13 @@ export function aPillarZ(y: number): number {
 }
 
 /**
- * Exact Z coordinate of the rear D-pillar / rear glass corner at height y in [1.15, 1.76].
+ * Exact Z coordinate of the rear D-pillar / rear glass corner at height y in [1.15, roofEdgeYAtZ(-2.08)].
  */
 export function dPillarRearZ(y: number): number {
   const yBot = 1.15;
-  const yTop = 1.76;
+  const yTop = roofEdgeYAtZ(-2.08);
   const t = clamp((y - yBot) / (yTop - yBot), 0, 1);
-  return -2.16 + 0.085 * t;
+  return -2.16 + 0.082 * t;
 }
 
 /**
@@ -191,44 +211,35 @@ export function frontBeltlineY(z: number): number {
  */
 export function hoodEdgeY(z: number): number {
   const t = clamp((z - 1.44) / (2.09 - 1.44), 0, 1);
-  // Sleek sculpted minivan hood sloping from 1.155m at cowl down to 0.975m at nose corner
   return 1.155 - 0.075 * t - 0.105 * t * t;
 }
 
 /**
- * Longitudinal roof edge height along Z (from windshield header z=0.86 to rear spoiler z=-2.25).
- */
-export function roofEdgeYAtZ(z: number): number {
-  if (z > 0.52) {
-    const t = clamp((z - 0.52) / (0.86 - 0.52), 0, 1);
-    return 1.764 - 0.02 * t * t;
-  }
-  if (z < -1.85) {
-    const t = clamp((-1.85 - z) / (2.25 - 1.85), 0, 1);
-    return 1.76 - 0.022 * t * t;
-  }
-  const u = (z + 0.65) / 1.2;
-  return 1.764 + 0.004 * Math.max(0, 1 - u * u);
-}
-
-/**
- * Transverse roof crown arch for normalized lateral coordinate u in [-1, 1].
+ * Transverse roof crown arch for normalized lateral coordinate u in [-1, 1] (top dome only).
  */
 export function roofCrownAtU(u: number, z: number): number {
   const base = roofEdgeYAtZ(z);
   const absU = clamp(Math.abs(u), 0, 1);
   const crown = VEHICLE_DIMS.roofCrownHeight * Math.pow(Math.cos(absU * (Math.PI / 2)), 0.88);
-  const frontScale = z > 0.62 ? 1 - 0.25 * clamp((z - 0.62) / 0.26, 0, 1) : 1;
+  const frontScale = z > 0.6 ? 1 - 0.28 * clamp((z - 0.6) / 0.28, 0, 1) : 1;
   const rearScale = z < -2.02 ? 1 - 0.35 * clamp((-2.02 - z) / 0.23, 0, 1) : 1;
   return base + crown * frontScale * rearScale;
+}
+
+/**
+ * Shared roof front leading edge Z(u) at zBase = 0.86 (bowed cleanly across windshield top).
+ */
+export function roofFrontBowZ(u: number): number {
+  return 0.86 + 0.052 * (1 - u * u);
 }
 
 /**
  * Front windshield horizontal bow (curvature in Z as a function of lateral u in [-1, 1]).
  */
 export function windshieldBowZ(u: number, y: number): number {
-  const t = clamp((y - 1.15) / (1.76 - 1.15), 0, 1);
-  const bowAmp = 0.068 - 0.016 * t;
+  const yTop = roofEdgeYAtZ(0.86);
+  const t = clamp((y - 1.15) / (yTop - 1.15), 0, 1);
+  const bowAmp = 0.068 - 0.016 * t; // equals 0.052 at y = yTop, matching roofFrontBowZ(u) identically
   return aPillarZ(y) + bowAmp * (1 - u * u);
 }
 
@@ -503,22 +514,27 @@ export function createCurvedSidePanel(opts: CurvedSidePanelOptions): THREE.Buffe
 }
 
 /**
- * Builds the smoothly curved, arched 3D Roof Shell from the windshield header (z=0.86)
- * to the integrated rear roof spoiler (z=-2.25).
+ * UNIFIED SEAMLESS ROOF + SIDE CANT RAIL SHELL:
+ * Wraps smoothly in ONE continuous C1 lofted mesh from the RIGHT window top edge (y=1.685)
+ * -> smooth rounded right roof shoulder -> arched roof dome -> smooth rounded left roof shoulder
+ * -> LEFT window top edge (y=1.685).
+ * Eliminates 100% of roof-to-frame steps, gaps, bumps, and protruding corners.
  */
 export function createSculptedRoofGeometry(): THREE.BufferGeometry {
   const zStations = [
-    -2.25, -2.19, -2.1, -1.94, -1.65, -1.25, -0.75, -0.25, 0.25, 0.56, 0.72, 0.82, 0.86,
+    -2.25, -2.18, -2.08, -1.92, -1.62, -1.22, -0.72, -0.22, 0.26, 0.56, 0.72, 0.81, 0.86,
   ];
-  const uCols = 22;
+  const cantSegs = 5;
+  const domeCols = 20;
 
   const grid: THREE.Vector3[][] = [];
   for (let r = 0; r < zStations.length; r++) {
     const zBase = zStations[r];
-    const row: THREE.Vector3[] = [];
-    for (let c = 0; c <= uCols; c++) {
-      const u = -1 + (2 * c) / uCols;
+    const edgeY = roofEdgeYAtZ(zBase);
+    const spoilerLift = zBase < -2.08 ? smoothstep(-2.08, -2.25, zBase) * 0.042 : 0;
+    const cantBottomY = VEHICLE_DIMS.windowTopY + spoilerLift;
 
+    const computeZAtU = (u: number) => {
       let z = zBase;
       if (zBase > 0.45) {
         const frontBlend = smoothstep(0.45, 0.86, zBase);
@@ -527,34 +543,62 @@ export function createSculptedRoofGeometry(): THREE.BufferGeometry {
         const rearBlend = smoothstep(-1.88, -2.25, zBase);
         z -= rearBlend * 0.055 * (1 - u * u);
       }
+      return z;
+    };
 
-      const edgeY = roofEdgeYAtZ(zBase);
-      const halfW = bodyOuterX(edgeY, zBase) + 0.002;
-      const x = u * halfW;
-      const y = roofCrownAtU(u, zBase);
+    const row: THREE.Vector3[] = [];
 
+    // 1. Right side cant rail climbing smoothly from windowTopY up to right roof shoulder (u = -1)
+    for (let k = 0; k < cantSegs; k++) {
+      const s = k / cantSegs;
+      const y = cantBottomY + (edgeY - cantBottomY) * s;
+      const z = zBase >= 0.855 ? aPillarZ(y) : computeZAtU(-1);
+      const x = -bodyOuterX(y, z);
       row.push(new THREE.Vector3(x, y, z));
     }
+
+    // 2. Smooth arched roof dome across u in [-1 .. +1]
+    for (let c = 0; c <= domeCols; c++) {
+      const u = -1 + (2 * c) / domeCols;
+      const z = computeZAtU(u);
+      const halfW = bodyOuterX(edgeY, zBase);
+      const x = u * halfW;
+      const y = roofCrownAtU(u, zBase);
+      row.push(new THREE.Vector3(x, y, z));
+    }
+
+    // 3. Left side cant rail descending smoothly from left roof shoulder (u = +1) down to windowTopY
+    for (let k = 1; k <= cantSegs; k++) {
+      const s = 1 - k / cantSegs;
+      const y = cantBottomY + (edgeY - cantBottomY) * s;
+      const z = zBase >= 0.855 ? aPillarZ(y) : computeZAtU(1);
+      const x = bodyOuterX(y, z);
+      row.push(new THREE.Vector3(x, y, z));
+    }
+
     grid.push(row);
   }
 
   return createGridSurfaceGeometry(grid, {
     flipWinding: true,
-    thicknessVec: (_p, r) => {
-      const edgeTaper = r === 0 || r === zStations.length - 1 ? 0.022 : 0.044;
-      return new THREE.Vector3(0, -edgeTaper, 0);
+    thicknessVec: (_p, r, c) => {
+      const totalCols = cantSegs * 2 + domeCols;
+      const edgeScale = r === 0 || r === zStations.length - 1 ? 0.55 : 1.0;
+      if (c < cantSegs) return new THREE.Vector3(0.036 * edgeScale, -0.012 * edgeScale, 0);
+      if (c > totalCols - cantSegs) return new THREE.Vector3(-0.036 * edgeScale, -0.012 * edgeScale, 0);
+      return new THREE.Vector3(0, -0.036 * edgeScale, 0);
     },
   });
 }
 
 /**
- * Builds the curved front windshield glass with realistic frame margins (wider A-pillars & roof brow!).
+ * Builds the curved front windshield glass with realistic frame margins.
  */
-export function createCurvedWindshieldGeometry(inset = 0.014, marginX = 0.052): THREE.BufferGeometry {
+export function createCurvedWindshieldGeometry(inset = 0.012, marginX = 0.05): THREE.BufferGeometry {
   const rows = 14;
   const cols = 20;
   const yBot = 1.155;
-  const yTop = 1.715;
+  const yTop = 1.718;
 
   const grid: THREE.Vector3[][] = [];
   for (let r = 0; r <= rows; r++) {
@@ -580,62 +624,112 @@ export function createCurvedWindshieldGeometry(inset = 0.014, marginX = 0.052): 
 }
 
 /**
- * Builds the solid curved upper windshield header / roof brow seamlessly bridging
- * the top of the windshield (y=1.71) up into the arched roof edge (y=1.76).
+ * SEAMLESS WINDSHIELD UPPER HEADER BROW:
+ * Bottom row hugs the top of the windshield glass (y = 1.702);
+ * Top row matches the EXACT arched front leading edge of `createSculptedRoofGeometry`
+ * -> 0.000mm gap, 0.000mm bump between windshield header and arched roof.
  */
 export function createWindshieldHeaderGeometry(): THREE.BufferGeometry {
-  const rows = 5;
+  const rows = 6;
   const cols = 20;
-  const yBot = 1.705;
-  const yTop = 1.762;
+  const yBot = 1.702;
+  const roofFrontEdgeY = roofEdgeYAtZ(0.86);
+  const roofFrontHalfW = bodyOuterX(roofFrontEdgeY, 0.86);
 
   const grid: THREE.Vector3[][] = [];
   for (let r = 0; r <= rows; r++) {
     const v = r / rows;
-    const y = yBot + (yTop - yBot) * v;
-    const zEdge = aPillarZ(y);
-    const halfW = bodyOuterX(y, zEdge) + 0.002;
-
     const row: THREE.Vector3[] = [];
     for (let c = 0; c <= cols; c++) {
       const u = -1 + (2 * c) / cols;
-      const x = u * halfW;
-      const z = windshieldBowZ(u, y) + 0.002;
-      row.push(new THREE.Vector3(x, y, z));
+
+      const pBot = new THREE.Vector3(
+        u * bodyOuterX(yBot, aPillarZ(yBot)),
+        yBot,
+        windshieldBowZ(u, yBot) - 0.002
+      );
+      const pTop = new THREE.Vector3(
+        u * roofFrontHalfW,
+        roofCrownAtU(u, 0.86),
+        roofFrontBowZ(u)
+      );
+
+      const p = pBot.clone().lerp(pTop, v);
+      const fillet = Math.sin(v * Math.PI) * 0.008;
+      p.y += fillet * 0.6;
+      p.z += fillet * 0.7;
+      row.push(p);
     }
     grid.push(row);
   }
 
   return createGridSurfaceGeometry(grid, {
     flipWinding: false,
-    thicknessVec: () => new THREE.Vector3(0, -0.015, -0.03),
+    thicknessVec: () => new THREE.Vector3(0, -0.02, -0.032),
   });
 }
 
 /**
- * Builds a substantial, realistic sculpted A-pillar wrapping from windshield to side window.
+ * SEAMLESS REAR WINDOW UPPER HEADER:
+ * Bottom row hugs the top of rear glass (y = 1.672);
+ * Top row matches the EXACT arched roof profile at z = -2.08 -> 0.000mm gap.
+ */
+export function createRearHeaderGeometry(): THREE.BufferGeometry {
+  const rows = 5;
+  const cols = 20;
+  const yBot = 1.672;
+  const zRearRoof = -2.08;
+  const roofRearEdgeY = roofEdgeYAtZ(zRearRoof);
+  const roofRearHalfW = bodyOuterX(roofRearEdgeY, zRearRoof);
+
+  const grid: THREE.Vector3[][] = [];
+  for (let r = 0; r <= rows; r++) {
+    const v = r / rows;
+    const row: THREE.Vector3[] = [];
+    for (let c = 0; c <= cols; c++) {
+      const u = -1 + (2 * c) / cols;
+      const pBot = rearFasciaPoint(u, yBot, 0.002);
+      const rearBlend = smoothstep(-1.88, -2.25, zRearRoof);
+      const zRoof = zRearRoof - rearBlend * 0.055 * (1 - u * u);
+      const pTop = new THREE.Vector3(u * roofRearHalfW, roofCrownAtU(u, zRearRoof), zRoof);
+      row.push(pBot.clone().lerp(pTop, v));
+    }
+    grid.push(row);
+  }
+
+  return createGridSurfaceGeometry(grid, {
+    flipWinding: true,
+    thicknessVec: () => new THREE.Vector3(0, -0.015, 0.03),
+  });
+}
+
+/**
+ * Builds a substantial sculpted A-pillar terminating EXACTLY at roofEdgeYAtZ(0.86)
+ * so it merges flush into the unified roof shoulder with zero protruding horns.
  */
 export function createAPillarGeometry(side: 1 | -1): THREE.BufferGeometry {
   const rows = 16;
   const cols = 7;
   const yBot = 1.15;
-  const yTop = 1.765;
+  const yFrontTop = roofEdgeYAtZ(0.86);
+  const ySideTop = VEHICLE_DIMS.windowTopY + 0.004;
 
   const grid: THREE.Vector3[][] = [];
   for (let r = 0; r <= rows; r++) {
     const v = r / rows;
-    const y = yBot + (yTop - yBot) * v;
-    const zEdge = aPillarZ(y);
-    const outerX = bodyOuterX(y, zEdge) + 0.003;
-    // More substantial real-car A-pillar width (9.2cm at base tapering to 7.6cm at roof)
-    const pillarW = 0.092 - 0.016 * v;
-
     const row: THREE.Vector3[] = [];
     for (let c = 0; c <= cols; c++) {
       const s = c / cols;
-      const angle = s * (Math.PI * 0.56);
+      // Front edge rises to windshield header (yFrontTop), side edge tucks flush beneath cant rail (ySideTop)
+      const yTopAtS = yFrontTop + (ySideTop - yFrontTop) * s;
+      const y = yBot + (yTopAtS - yBot) * v;
+      const zEdge = aPillarZ(y);
+      const outerX = bodyOuterX(y, zEdge);
+      const pillarW = 0.09 - 0.018 * v;
+      const angle = s * (Math.PI * 0.54);
       const x = side * (outerX - pillarW * (1 - Math.sin(angle)) * 0.72);
-      const z = zEdge + 0.018 * Math.cos(angle) - pillarW * s * 0.68;
+      const frontBulge = 0.012 * (1 - v);
+      const z = zEdge + frontBulge * Math.cos(angle) - pillarW * s * 0.65;
       row.push(new THREE.Vector3(x, y, z));
     }
     grid.push(row);
@@ -643,7 +737,7 @@ export function createAPillarGeometry(side: 1 | -1): THREE.BufferGeometry {
 
   return createGridSurfaceGeometry(grid, {
     flipWinding: side === -1,
-    thicknessVec: () => new THREE.Vector3(-side * 0.044, 0, -0.038),
+    thicknessVec: () => new THREE.Vector3(-side * 0.042, 0, -0.036),
   });
 }
 
@@ -697,8 +791,7 @@ export function createFrontNoseGeometry(): THREE.BufferGeometry {
 }
 
 /**
- * Builds a sleek, flush front fascia element strictly conforming to the curved front nose,
- * supporting trapezoidal/tapered u-bounds via optional functions `uStartFn(v)` / `uEndFn(v)`!
+ * Builds a sleek, flush front fascia element strictly conforming to the curved front nose.
  */
 export function createFlushFrontStripGeometry(
   uStart: number | ((v: number) => number),
@@ -735,46 +828,42 @@ export function createFlushFrontStripGeometry(
 }
 
 /**
- * Builds a 3D parametric modern minivan grille matrix of staggered diamond-cut metallic studs/blocks
- * floating over the curved front grille mesh (inspired by modern Alphard / Noah / Serena!).
+ * Builds a compact, refined 3D parametric modern minivan grille matrix of staggered
+ * diamond-cut metallic studs scaled cleanly for the tighter grille opening.
  */
 export function createParametricGrilleStudsGeometry(): THREE.BufferGeometry {
   const positions: number[] = [];
   const indices: number[] = [];
   let vertOffset = 0;
 
-  const yMin = 0.505;
-  const yMax = 0.865;
-  const numRows = 6;
+  const yMin = 0.525;
+  const yMax = 0.845;
+  const numRows = 5;
 
   for (let rowIdx = 0; rowIdx < numRows; rowIdx++) {
     const vCenter = (rowIdx + 0.5) / numRows;
     const yCenter = yMin + (yMax - yMin) * vCenter;
-    // Trapezoidal grille width: wider near headlights at top, slightly narrower near lower bumper
-    const maxU = 0.51 + 0.14 * vCenter;
-    const colsInRow = rowIdx % 2 === 0 ? 11 : 10;
-    const halfH = 0.016;
+    const maxU = 0.4 + 0.11 * vCenter;
+    const colsInRow = rowIdx % 2 === 0 ? 9 : 8;
+    const halfH = 0.0145;
 
     for (let colIdx = 0; colIdx < colsInRow; colIdx++) {
-      const t = (colIdx + 0.5) / colsInRow; // 0..1
+      const t = (colIdx + 0.5) / colsInRow;
       const uCenter = -maxU + 2 * maxU * t;
 
-      // Leave a clean symmetric circular bay for the center chrome emblem
-      const emblemDist = Math.hypot(uCenter / 0.145, (yCenter - 0.745) / 0.082);
+      const emblemDist = Math.hypot(uCenter / 0.135, (yCenter - 0.745) / 0.078);
       if (emblemDist < 1.0) continue;
 
       const halfU = (maxU / colsInRow) * 0.62;
       const protrudeBase = 0.011;
-      const protrudeTip = 0.022;
+      const protrudeTip = 0.021;
 
-      // 4 back-base corners + 4 smaller bevelled front-face corners = crisp 3D faceted jewel block!
       const bBL = frontFasciaPoint(uCenter - halfU, yCenter - halfH, protrudeBase);
       const bBR = frontFasciaPoint(uCenter + halfU, yCenter - halfH, protrudeBase);
       const bTR = frontFasciaPoint(uCenter + halfU, yCenter + halfH, protrudeBase);
       const bTL = frontFasciaPoint(uCenter - halfU, yCenter + halfH, protrudeBase);
 
-      // Slight chevron tilt outward for dynamic modern styling
-      const slant = Math.sign(uCenter) * 0.005;
+      const slant = Math.sign(uCenter) * 0.0045;
       const fBL = frontFasciaPoint(uCenter - halfU * 0.68, yCenter - halfH * 0.62 + slant, protrudeTip);
       const fBR = frontFasciaPoint(uCenter + halfU * 0.68, yCenter - halfH * 0.62 - slant, protrudeTip);
       const fTR = frontFasciaPoint(uCenter + halfU * 0.68, yCenter + halfH * 0.62 - slant, protrudeTip);
@@ -784,15 +873,10 @@ export function createParametricGrilleStudsGeometry(): THREE.BufferGeometry {
       for (const p of verts) positions.push(p.x, p.y, p.z);
 
       const o = vertOffset;
-      // Front face (4,5,6,7)
       indices.push(o + 4, o + 5, o + 6, o + 4, o + 6, o + 7);
-      // Bottom bevel (0,1,5,4)
       indices.push(o + 0, o + 1, o + 5, o + 0, o + 5, o + 4);
-      // Top bevel (7,6,2,3)
       indices.push(o + 7, o + 6, o + 2, o + 7, o + 2, o + 3);
-      // Left bevel (0,4,7,3)
       indices.push(o + 0, o + 4, o + 7, o + 0, o + 7, o + 3);
-      // Right bevel (5,1,2,6)
       indices.push(o + 5, o + 1, o + 2, o + 5, o + 2, o + 6);
 
       vertOffset += 8;
@@ -802,7 +886,6 @@ export function createParametricGrilleStudsGeometry(): THREE.BufferGeometry {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geo.setIndex(indices);
-  // Use non-indexed for crisp faceted jewel-block specular highlights!
   const faceted = geo.toNonIndexed();
   faceted.computeVertexNormals();
   geo.dispose();
@@ -810,7 +893,7 @@ export function createParametricGrilleStudsGeometry(): THREE.BufferGeometry {
 }
 
 /**
- * Builds the wrap-around side wing of a headlight seamlessly extending back along the front fender!
+ * Builds the larger wrap-around side wing of a headlight seamlessly extending back along the front fender!
  */
 export function createHeadlightSideWingGeometry(
   side: 1 | -1,
@@ -822,23 +905,23 @@ export function createHeadlightSideWingGeometry(
   return createCurvedSidePanel({
     side,
     zMin: zRear,
-    zMax: 2.16,
+    zMax: 2.165,
     yMin: (z) => {
       const t = clamp((2.14 - z) / (2.14 - zRear), 0, 1);
-      return yMin + 0.055 * t;
+      return yMin + 0.085 * t * t;
     },
-    yMax: (z) => Math.min(yMax, hoodEdgeY(z) - 0.008),
+    yMax: (z) => Math.min(yMax, hoodEdgeY(z) - 0.006),
     zMinAtY: () => zRear,
     zMaxAtY: (y) => frontCornerZ(y) + 0.004,
     xOffset: protrude,
     thickness: 0.018,
-    rows: 6,
-    cols: 8,
+    rows: 8,
+    cols: 10,
   });
 }
 
 /**
- * Builds the smoothly curved lower Rear Tailgate & Rear Bumper (raised beltline y = 1.155!).
+ * Builds the smoothly curved lower Rear Tailgate & Rear Bumper.
  */
 export function createRearTailgateGeometry(): THREE.BufferGeometry {
   const yStations = [0.21, 0.26, 0.36, 0.50, 0.68, 0.88, 1.04, 1.155];
@@ -869,7 +952,7 @@ export function createRearGlassGeometry(): THREE.BufferGeometry {
   const rows = 12;
   const cols = 20;
   const yBot = 1.17;
-  const yTop = 1.68;
+  const yTop = 1.676;
 
   const grid: THREE.Vector3[][] = [];
   for (let r = 0; r <= rows; r++) {
@@ -877,7 +960,7 @@ export function createRearGlassGeometry(): THREE.BufferGeometry {
     const y = yBot + (yTop - yBot) * v;
     const row: THREE.Vector3[] = [];
     for (let c = 0; c <= cols; c++) {
-      const u = -0.82 + (1.64 * c) / cols; // wider D-pillar & taillight frame on left & right!
+      const u = -0.82 + (1.64 * c) / cols;
       row.push(rearFasciaPoint(u, y, -0.01));
     }
     grid.push(row);
@@ -890,7 +973,7 @@ export function createRearGlassGeometry(): THREE.BufferGeometry {
 }
 
 /**
- * Builds a flush curved rear tailgate/taillight/frame strip conforming strictly to rearFasciaPoint(u, y).
+ * Builds a flush curved rear tailgate/taillight/trim strip conforming strictly to rearFasciaPoint(u, y).
  */
 export function createFlushRearStripGeometry(
   uStart: number,
@@ -921,7 +1004,8 @@ export function createFlushRearStripGeometry(
 }
 
 /**
- * Builds a sleek rounded rubber tire using LatheGeometry oriented along the X axle.
+ * Builds a realistic sculpted rubber tire with 4 recessed 3D circumferential drainage grooves
+ * plus sidewall rim-protector ribs and contoured shoulders.
  */
 export function createSculptedTireGeometry(
   outerR = 0.315,
@@ -929,33 +1013,49 @@ export function createSculptedTireGeometry(
   width = 0.215
 ): THREE.BufferGeometry {
   const hw = width * 0.5;
+  const gDepth = 0.0085;
   const pts: THREE.Vector2[] = [
     new THREE.Vector2(rimR, -hw * 0.84),
-    new THREE.Vector2(rimR + 0.035, -hw * 0.96),
-    new THREE.Vector2(outerR - 0.038, -hw),
-    new THREE.Vector2(outerR - 0.012, -hw * 0.91),
-    new THREE.Vector2(outerR, -hw * 0.74),
-    new THREE.Vector2(outerR + 0.004, 0),
-    new THREE.Vector2(outerR, hw * 0.74),
-    new THREE.Vector2(outerR - 0.012, hw * 0.91),
-    new THREE.Vector2(outerR - 0.038, hw),
-    new THREE.Vector2(rimR + 0.035, hw * 0.96),
+    new THREE.Vector2(rimR + 0.022, -hw * 0.94),
+    new THREE.Vector2(rimR + 0.048, -hw * 0.99),
+    new THREE.Vector2(outerR - 0.042, -hw),
+    new THREE.Vector2(outerR - 0.014, -hw * 0.92),
+    new THREE.Vector2(outerR - 0.001, -hw * 0.78),
+    new THREE.Vector2(outerR + 0.003, -hw * 0.58),
+    new THREE.Vector2(outerR - gDepth, -hw * 0.52),
+    new THREE.Vector2(outerR - gDepth, -hw * 0.44),
+    new THREE.Vector2(outerR + 0.004, -hw * 0.39),
+    new THREE.Vector2(outerR + 0.004, -hw * 0.22),
+    new THREE.Vector2(outerR - gDepth, -hw * 0.17),
+    new THREE.Vector2(outerR - gDepth, -hw * 0.09),
+    new THREE.Vector2(outerR + 0.005, -hw * 0.04),
+    new THREE.Vector2(outerR + 0.005, hw * 0.04),
+    new THREE.Vector2(outerR - gDepth, hw * 0.09),
+    new THREE.Vector2(outerR - gDepth, hw * 0.17),
+    new THREE.Vector2(outerR + 0.004, hw * 0.22),
+    new THREE.Vector2(outerR + 0.004, hw * 0.39),
+    new THREE.Vector2(outerR - gDepth, hw * 0.44),
+    new THREE.Vector2(outerR - gDepth, hw * 0.52),
+    new THREE.Vector2(outerR + 0.003, hw * 0.58),
+    new THREE.Vector2(outerR - 0.001, hw * 0.78),
+    new THREE.Vector2(outerR - 0.014, hw * 0.92),
+    new THREE.Vector2(outerR - 0.042, hw),
+    new THREE.Vector2(rimR + 0.048, hw * 0.99),
+    new THREE.Vector2(rimR + 0.022, hw * 0.94),
     new THREE.Vector2(rimR, hw * 0.84),
   ];
-  const geo = new THREE.LatheGeometry(pts, 36);
+  const geo = new THREE.LatheGeometry(pts, 48);
   geo.rotateZ(Math.PI / 2);
   geo.computeVertexNormals();
   return geo;
 }
 
 /**
- * Builds a modern geometric diamond-cut alloy wheel spoke blade (extruded angular Y-boomerang facet).
- * Oriented in the Y-Z wheel plane (extruded along X) so 5 radial instances form an intricate geometric web!
+ * Builds a modern geometric diamond-cut alloy wheel spoke blade.
  */
 export function createGeometricSpokeGeometry(variant: 'machined' | 'accent'): THREE.BufferGeometry {
   const shape = new THREE.Shape();
   if (variant === 'machined') {
-    // Crisp asymmetrical diamond-cut Y-blade with geometric kink (modern EV / luxury minivan alloy look)
     shape.moveTo(-0.016, 0.044);
     shape.lineTo(0.014, 0.044);
     shape.lineTo(0.022, 0.118);
@@ -967,7 +1067,6 @@ export function createGeometricSpokeGeometry(variant: 'machined' | 'accent'): TH
     shape.lineTo(-0.016, 0.122);
     shape.closePath();
   } else {
-    // Secondary recessed geometric triangular aero fin between main Y-spokes
     shape.moveTo(0.022, 0.062);
     shape.lineTo(0.048, 0.088);
     shape.lineTo(0.095, 0.174);
@@ -984,7 +1083,6 @@ export function createGeometricSpokeGeometry(variant: 'machined' | 'accent'): TH
     bevelSegments: 2,
   });
   geo.translate(0, 0, -0.006);
-  // Rotate so shape (X, Y) lies in wheel's (Z, Y) plane and depth lies along wheel axle X!
   geo.rotateY(Math.PI / 2);
   geo.computeVertexNormals();
   return geo;
