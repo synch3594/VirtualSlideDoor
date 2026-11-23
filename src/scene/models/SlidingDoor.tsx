@@ -227,13 +227,13 @@ export function SlidingDoor() {
         cols: 12,
         usePlanTaper: false,
       }),
-      // Curved front-edge rubber anti-pinch sensor strip
+      // Curved front-edge rubber anti-pinch sensor strip (strictly <= winTopY)
       antiPinchEdge: createCurvedSidePanel({
         side: 1,
         zMin: zFront - 0.002,
         zMax: zFront + 0.012,
         yMin: 0.35,
-        yMax: 1.725,
+        yMax: winTopY,
         xOffset: -0.008,
         thickness: 0.034,
         zShift: cz,
@@ -241,13 +241,13 @@ export function SlidingDoor() {
         cols: 2,
         usePlanTaper: false,
       }),
-      // Curved rear-edge rubber seal
+      // Curved rear-edge rubber seal (strictly <= winTopY)
       rearEdgeSeal: createCurvedSidePanel({
         side: 1,
         zMin: zRear - 0.01,
         zMax: zRear + 0.002,
         yMin: 0.35,
-        yMax: 1.725,
+        yMax: winTopY,
         xOffset: -0.008,
         thickness: 0.032,
         zShift: cz,
@@ -263,7 +263,7 @@ export function SlidingDoor() {
   const handleY = 1.015;
   const handleSurfaceX = bodySideX(handleY);
   const centerRailBodyX = bodySideX(DOOR_METRICS.centerRailY);
-  const upperTrackX = bodySideX(1.72);
+  const upperTrackX = bodySideX(VEHICLE_DIMS.windowTopY - 0.012);
 
   useFrame(({ clock }) => {
     const pose = computeDoorPose(liveSim.progress, liveSim.elasticBounce);
@@ -336,7 +336,7 @@ export function SlidingDoor() {
     if (upperArmGroupRef.current) {
       const upperX = upperTrackX - 0.055 + pose.xOffset * 0.5;
       const upperZ = DOOR_METRICS.doorClosedCenterZ + pose.zOffset + 0.42;
-      upperArmGroupRef.current.position.set(upperX, 1.715, upperZ);
+      upperArmGroupRef.current.position.set(upperX, VEHICLE_DIMS.windowTopY - 0.014, upperZ);
       upperArmGroupRef.current.scale.x = Math.max(
         0.32,
         0.32 + (pose.xOffset / DOOR_METRICS.maxPopoutX) * 0.92
@@ -585,7 +585,7 @@ export function SlidingDoor() {
         </mesh>
       </group>
 
-      <group ref={upperArmGroupRef} position={[upperTrackX - 0.055, 1.715, 0.11]}>
+      <group ref={upperArmGroupRef} position={[upperTrackX - 0.055, VEHICLE_DIMS.windowTopY - 0.014, 0.11]}>
         <mesh>
           <boxGeometry args={[0.125, 0.016, 0.04]} />
           <meshStandardMaterial color="#1e293b" metalness={0.75} roughness={0.38} />

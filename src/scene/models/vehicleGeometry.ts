@@ -827,73 +827,228 @@ export function createFlushFrontStripGeometry(
   });
 }
 
-/**
- * Builds a compact, refined 3D parametric modern minivan grille matrix of staggered
- * diamond-cut metallic studs scaled cleanly for the tighter grille opening.
- */
-export function createParametricGrilleStudsGeometry(): THREE.BufferGeometry {
-  const positions: number[] = [];
-  const indices: number[] = [];
-  let vertOffset = 0;
-
-  const yMin = 0.525;
-  const yMax = 0.845;
-  const numRows = 5;
-
-  for (let rowIdx = 0; rowIdx < numRows; rowIdx++) {
-    const vCenter = (rowIdx + 0.5) / numRows;
-    const yCenter = yMin + (yMax - yMin) * vCenter;
-    const maxU = 0.4 + 0.11 * vCenter;
-    const colsInRow = rowIdx % 2 === 0 ? 9 : 8;
-    const halfH = 0.0145;
-
-    for (let colIdx = 0; colIdx < colsInRow; colIdx++) {
-      const t = (colIdx + 0.5) / colsInRow;
-      const uCenter = -maxU + 2 * maxU * t;
-
-      const emblemDist = Math.hypot(uCenter / 0.135, (yCenter - 0.745) / 0.078);
-      if (emblemDist < 1.0) continue;
-
-      const halfU = (maxU / colsInRow) * 0.62;
-      const protrudeBase = 0.011;
-      const protrudeTip = 0.021;
-
-      const bBL = frontFasciaPoint(uCenter - halfU, yCenter - halfH, protrudeBase);
-      const bBR = frontFasciaPoint(uCenter + halfU, yCenter - halfH, protrudeBase);
-      const bTR = frontFasciaPoint(uCenter + halfU, yCenter + halfH, protrudeBase);
-      const bTL = frontFasciaPoint(uCenter - halfU, yCenter + halfH, protrudeBase);
-
-      const slant = Math.sign(uCenter) * 0.0045;
-      const fBL = frontFasciaPoint(uCenter - halfU * 0.68, yCenter - halfH * 0.62 + slant, protrudeTip);
-      const fBR = frontFasciaPoint(uCenter + halfU * 0.68, yCenter - halfH * 0.62 - slant, protrudeTip);
-      const fTR = frontFasciaPoint(uCenter + halfU * 0.68, yCenter + halfH * 0.62 - slant, protrudeTip);
-      const fTL = frontFasciaPoint(uCenter - halfU * 0.68, yCenter + halfH * 0.62 + slant, protrudeTip);
-
-      const verts = [bBL, bBR, bTR, bTL, fBL, fBR, fTR, fTL];
-      for (const p of verts) positions.push(p.x, p.y, p.z);
-
-      const o = vertOffset;
-      indices.push(o + 4, o + 5, o + 6, o + 4, o + 6, o + 7);
-      indices.push(o + 0, o + 1, o + 5, o + 0, o + 5, o + 4);
-      indices.push(o + 7, o + 6, o + 2, o + 7, o + 2, o + 3);
-      indices.push(o + 0, o + 4, o + 7, o + 0, o + 7, o + 3);
-      indices.push(o + 5, o + 1, o + 2, o + 5, o + 2, o + 6);
-
-      vertOffset += 8;
-    }
-  }
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geo.setIndex(indices);
-  const faceted = geo.toNonIndexed();
-  faceted.computeVertexNormals();
-  geo.dispose();
-  return faceted;
+export interface ShapedFrontPatchOptions {
+  uMin: number | ((v: number) => number);
+  uMax: number | ((v: number) => number);
+  yMin: number | ((u: number) => number);
+  yMax: number | ((u: number) => number);
+  protrude?: number | ((s: number, v: number, u: number, y: number) => number);
+  thickness?: number;
+  cols?: number;
+  rows?: number;
 }
 
 /**
- * Builds the larger wrap-around side wing of a headlight seamlessly extending back along the front fender!
+ * Builds a custom-contoured 3D front fascia patch supporting tapered u(v),
+ * swept y(u), and parametric Z relief while conforming strictly to the curved nose.
+ */
+export function createShapedFrontPatchGeometry(opts: ShapedFrontPatchOptions): THREE.BufferGeometry {
+  const cols = opts.cols ?? 12;
+  const rows = opts.rows ?? 4;
+  const thickness = opts.thickness ?? 0.014;
+  const evalU0 = (v: number) => (typeof opts.uMin === 'function' ? opts.uMin(v) : opts.uMin);
+  const evalU1 = (v: number) => (typeof opts.uMax === 'function' ? opts.uMax(v) : opts.uMax);
+  const evalY0 = (u: number) => (typeof opts.yMin === 'function' ? opts.yMin(u) : opts.yMin);
+  const evalY1 = (u: number) => (typeof opts.yMax === 'function' ? opts.yMax(u) : opts.yMax);
+
+  const grid: THREE.Vector3[][] = [];
+  for (let r = 0; r <= rows; r++) {
+    const v = r / rows;
+    const u0 = evalU0(v);
+    const u1 = evalU1(v);
+    const row: THREE.Vector3[] = [];
+    for (let c = 0; c <= cols; c++) {
+      const s = c / cols;
+      const u = u0 + (u1 - u0) * s;
+      const y0 = evalY0(u);
+      const y1 = evalY1(u);
+      const y = y0 + (y1 - y0) * v;
+      const zP =
+        typeof opts.protrude === 'function'
+          ? opts.protrude(s, v, u, y)
+          : (opts.protrude ?? 0.01);
+      row.push(frontFasciaPoint(u, y, zP));
+    }
+    grid.push(row);
+  }
+
+  const flip = evalU1(0.5) < evalU0(0.5);
+  return createGridSurfaceGeometry(grid, {
+    flipWinding: flip,
+    thicknessVec: () => new THREE.Vector3(0, 0, -thickness),
+  });
+}
+
+/**
+ * Builds a sleek luxury-minivan front grille with 5 knife-edge horizontal wing
+ * louvers (with V-arch sweep and center emblem cutout) backed by vertical aero sub-fins.
+ */
+export function createModernWingGrilleGeometry(): {
+  wingBars: THREE.BufferGeometry;
+  subFins: THREE.BufferGeometry;
+} {
+  const wingPositions: number[] = [];
+  const wingIndices: number[] = [];
+  let wingVerts = 0;
+
+  const yBottom = 0.562;
+  const yTop = 0.892;
+  const grilleMaxUAtY = (y: number) => {
+    const v = clamp((y - yBottom) / (yTop - yBottom), 0, 1);
+    return 0.405 + 0.132 * Math.pow(v, 0.85);
+  };
+
+  const appendHorizontalBarSpan = (
+    uA: number,
+    uB: number,
+    yBase: number,
+    halfH: number,
+    archLift: number,
+    maxU: number,
+    protrudeBase: number,
+    protrudeTip: number
+  ) => {
+    const segCols = 12;
+    const baseOffset = wingVerts;
+
+    for (let c = 0; c <= segCols; c++) {
+      const t = c / segCols;
+      const u = uA + (uB - uA) * t;
+      const absFrac = Math.min(Math.abs(u) / maxU, 1);
+      const yC = yBase + archLift * Math.pow(absFrac, 1.75);
+      // Slight taper at outermost ends so wing blades tuck cleanly into frame
+      const endTaper = 1 - 0.18 * Math.pow(absFrac, 3);
+      const hOuter = halfH * endTaper;
+      const hInner = halfH * 0.42 * endTaper;
+
+      const bB = frontFasciaPoint(u, yC - hOuter, protrudeBase);
+      const fB = frontFasciaPoint(u, yC - hInner, protrudeTip);
+      const fT = frontFasciaPoint(u, yC + hInner, protrudeTip);
+      const bT = frontFasciaPoint(u, yC + hOuter, protrudeBase);
+
+      wingPositions.push(
+        bB.x, bB.y, bB.z,
+        fB.x, fB.y, fB.z,
+        fT.x, fT.y, fT.z,
+        bT.x, bT.y, bT.z
+      );
+      wingVerts += 4;
+    }
+
+    for (let c = 0; c < segCols; c++) {
+      const v0 = baseOffset + c * 4;
+      const v1 = v0 + 4;
+      // Bottom bevel
+      wingIndices.push(v0 + 0, v1 + 0, v1 + 1, v0 + 0, v1 + 1, v0 + 1);
+      // Front knife-edge face
+      wingIndices.push(v0 + 1, v1 + 1, v1 + 2, v0 + 1, v1 + 2, v0 + 2);
+      // Top bevel
+      wingIndices.push(v0 + 2, v1 + 2, v1 + 3, v0 + 2, v1 + 3, v0 + 3);
+    }
+
+    // Left and right end caps
+    const first = baseOffset;
+    wingIndices.push(first + 0, first + 1, first + 2, first + 0, first + 2, first + 3);
+    const last = baseOffset + segCols * 4;
+    wingIndices.push(last + 0, last + 3, last + 2, last + 0, last + 2, last + 1);
+  };
+
+  // 5 crisp horizontal wing louvers between y = 0.596 and y = 0.854
+  const barCenters = [0.598, 0.660, 0.722, 0.784, 0.846];
+  for (let i = 0; i < barCenters.length; i++) {
+    const yC = barCenters[i];
+    const maxU = grilleMaxUAtY(yC) - 0.022;
+    const halfH = i === 4 ? 0.011 : 0.010;
+    const archLift = 0.0085;
+    const pBase = 0.006;
+    const pTip = i % 2 === 0 ? 0.021 : 0.0185;
+
+    // Clean emblem cutout across u in [-0.125, 0.125], y in [0.745, 0.855]
+    if (yC >= 0.745 && yC <= 0.855) {
+      const gapU = 0.118;
+      appendHorizontalBarSpan(-maxU, -gapU, yC, halfH, archLift, maxU, pBase, pTip);
+      appendHorizontalBarSpan(gapU, maxU, yC, halfH, archLift, maxU, pBase, pTip);
+    } else {
+      appendHorizontalBarSpan(-maxU, maxU, yC, halfH, archLift, maxU, pBase, pTip);
+    }
+  }
+
+  const rawWings = new THREE.BufferGeometry();
+  rawWings.setAttribute('position', new THREE.Float32BufferAttribute(wingPositions, 3));
+  rawWings.setIndex(wingIndices);
+  const wingBars = rawWings.toNonIndexed();
+  wingBars.computeVertexNormals();
+  rawWings.dispose();
+
+  // Dark recessed vertical aero sub-fins behind the horizontal wing louvers
+  const finPositions: number[] = [];
+  const finIndices: number[] = [];
+  let finVerts = 0;
+
+  const appendVerticalFin = (uFrac: number, yStart: number, yEnd: number) => {
+    const segRows = 8;
+    const baseOffset = finVerts;
+    const halfU = 0.0055;
+    const pBase = 0.004;
+    const pTip = 0.0125;
+
+    for (let r = 0; r <= segRows; r++) {
+      const t = r / segRows;
+      const y = yStart + (yEnd - yStart) * t;
+      const uC = uFrac * (grilleMaxUAtY(y) - 0.026);
+      const bL = frontFasciaPoint(uC - halfU, y, pBase);
+      const bR = frontFasciaPoint(uC + halfU, y, pBase);
+      const fR = frontFasciaPoint(uC + halfU * 0.55, y, pTip);
+      const fL = frontFasciaPoint(uC - halfU * 0.55, y, pTip);
+
+      finPositions.push(
+        bL.x, bL.y, bL.z,
+        bR.x, bR.y, bR.z,
+        fR.x, fR.y, fR.z,
+        fL.x, fL.y, fL.z
+      );
+      finVerts += 4;
+    }
+
+    for (let r = 0; r < segRows; r++) {
+      const v0 = baseOffset + r * 4;
+      const v1 = v0 + 4;
+      // Right face
+      finIndices.push(v0 + 1, v1 + 1, v1 + 2, v0 + 1, v1 + 2, v0 + 2);
+      // Front face
+      finIndices.push(v0 + 2, v1 + 2, v1 + 3, v0 + 2, v1 + 3, v0 + 3);
+      // Left face
+      finIndices.push(v0 + 3, v1 + 3, v1 + 0, v0 + 3, v1 + 0, v0 + 0);
+    }
+
+    // Bottom & top caps
+    const first = baseOffset;
+    finIndices.push(first + 0, first + 1, first + 2, first + 0, first + 2, first + 3);
+    const last = baseOffset + segRows * 4;
+    finIndices.push(last + 0, last + 3, last + 2, last + 0, last + 2, last + 1);
+  };
+
+  const uFracs = [-0.84, -0.68, -0.52, -0.36, -0.20, 0, 0.20, 0.36, 0.52, 0.68, 0.84];
+  for (const uf of uFracs) {
+    if (Math.abs(uf) < 0.1) {
+      appendVerticalFin(uf, 0.576, 0.728);
+    } else {
+      appendVerticalFin(uf, 0.576, 0.876);
+    }
+  }
+
+  const rawFins = new THREE.BufferGeometry();
+  rawFins.setAttribute('position', new THREE.Float32BufferAttribute(finPositions, 3));
+  rawFins.setIndex(finIndices);
+  const subFins = rawFins.toNonIndexed();
+  subFins.computeVertexNormals();
+  rawFins.dispose();
+
+  return { wingBars, subFins };
+}
+
+/**
+ * Builds the sleek, upswept side fender wing of an angular LED headlight.
  */
 export function createHeadlightSideWingGeometry(
   side: 1 | -1,
@@ -907,10 +1062,11 @@ export function createHeadlightSideWingGeometry(
     zMin: zRear,
     zMax: 2.165,
     yMin: (z) => {
-      const t = clamp((2.14 - z) / (2.14 - zRear), 0, 1);
-      return yMin + 0.085 * t * t;
+      const t = clamp((2.15 - z) / (2.15 - zRear), 0, 1);
+      // Sweeps sharply upward toward the fender tip (0.810 -> 0.892)
+      return yMin + (yMax - yMin - 0.018) * Math.pow(t, 0.82);
     },
-    yMax: (z) => Math.min(yMax, hoodEdgeY(z) - 0.006),
+    yMax: (z) => Math.min(yMax + 0.006, hoodEdgeY(z) - 0.006),
     zMinAtY: () => zRear,
     zMaxAtY: (y) => frontCornerZ(y) + 0.004,
     xOffset: protrude,

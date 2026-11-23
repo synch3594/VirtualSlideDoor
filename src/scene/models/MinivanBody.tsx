@@ -16,13 +16,14 @@ import {
   createGeometricSpokeGeometry,
   createHeadlightSideWingGeometry,
   createMirrorCapGeometry,
-  createParametricGrilleStudsGeometry,
+  createModernWingGrilleGeometry,
   createRearGlassGeometry,
   createRearHeaderGeometry,
   createRearTailgateGeometry,
   createRoundedBoxGeometry,
   createSculptedRoofGeometry,
   createSculptedTireGeometry,
+  createShapedFrontPatchGeometry,
   createSharkFinGeometry,
   createWheelArchFlareGeometry,
   createWindshieldHeaderGeometry,
@@ -614,9 +615,22 @@ export function MinivanBody() {
 
     const fenderTopY = (z: number) => (z >= 1.44 ? hoodEdgeY(z) : frontBeltlineY(z));
 
-    // Compact refined trapezoidal grille boundary u(v) for v in [0 (bottom), 1 (top)]
-    const grilleHalfU = (v: number) => 0.42 + 0.11 * v;
+    // Swept Front Grille-to-Headlight Datum Curves (seamless visual continuity)
+    const smooth01 = (a: number, b: number, x: number) => {
+      const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+      return t * t * (3 - 2 * t);
+    };
+    const browTopY = (absU: number) => 0.902 + 0.022 * smooth01(0.42, 0.96, absU);
+    const hlBotY = (absU: number) => 0.772 + 0.044 * smooth01(0.52, 0.99, absU);
+    const grilleOuterU = (v: number) => 0.405 + 0.132 * Math.pow(v, 0.85);
+    const hlInnerU = (v: number) => 0.514 + 0.042 * v;
+    const wingGrille = createModernWingGrilleGeometry();
     const pillarTopY = VEHICLE_DIMS.windowTopY + 0.003; // tucks flush beneath unified roof cant rail without overlapping
+    const cz = DOOR_METRICS.doorClosedCenterZ; // -0.31
+    const rDoorFront = cz + 0.526; // +0.216
+    const rDoorRear = cz - 0.526; // -0.836
+    const beltY = VEHICLE_DIMS.beltlineY; // 1.15
+    const winTopY = VEHICLE_DIMS.windowTopY; // 1.685
 
     return {
       // Major unified shells (seamless roof + cant rails + windshield/rear headers!)
@@ -636,57 +650,317 @@ export function MinivanBody() {
       sharkFin: createSharkFinGeometry(),
       handleBar: createRoundedBoxGeometry(0.026, 0.032, 0.165, 0.008, 3),
 
-      // ===== REFINED COMPACT MESH GRILLE + LARGER MULTI-PROJECTOR WRAP-AROUND HEADLIGHTS =====
+      // ===== SLEEK WING-LOUVER FRONT GRILLE + SWEPT MULTI-CRYSTAL LED HEADLIGHTS + PLATE PLINTH =====
       grilleMeshBacking: createFlushFrontStripGeometry(
-        (v) => -grilleHalfU(v),
-        (v) => grilleHalfU(v),
-        0.5,
-        0.855,
-        0.009,
-        0.018,
+        (v) => -(grilleOuterU(v) - 0.022),
+        (v) => grilleOuterU(v) - 0.022,
+        0.564,
+        0.892,
+        0.004,
+        0.016,
         18,
         8
       ),
-      grilleStuds: createParametricGrilleStudsGeometry(),
-      grilleTopChrome: createFlushFrontStripGeometry(-0.53, 0.53, 0.854, 0.888, 0.015, 0.014, 18, 2),
+      grilleWingBars: wingGrille.wingBars,
+      grilleSubFins: wingGrille.subFins,
+      grilleTopChrome: createShapedFrontPatchGeometry({
+        uMin: -0.556,
+        uMax: 0.556,
+        yMin: (u) => browTopY(Math.abs(u)) - 0.020,
+        yMax: (u) => browTopY(Math.abs(u)),
+        protrude: 0.019,
+        thickness: 0.018,
+        cols: 20,
+        rows: 2,
+      }),
       grilleBorderL: createFlushFrontStripGeometry(
-        (v) => grilleHalfU(v) - 0.01,
-        (v) => grilleHalfU(v) + 0.034,
-        0.495,
-        0.86,
-        0.014,
-        0.014,
+        (v) => grilleOuterU(v) - 0.026,
+        (v) => grilleOuterU(v),
+        0.558,
+        0.892,
+        0.018,
+        0.018,
         4,
         10
       ),
       grilleBorderR: createFlushFrontStripGeometry(
-        (v) => -(grilleHalfU(v) + 0.034),
-        (v) => -(grilleHalfU(v) - 0.01),
-        0.495,
-        0.86,
-        0.014,
-        0.014,
+        (v) => -grilleOuterU(v),
+        (v) => -(grilleOuterU(v) - 0.026),
+        0.558,
+        0.892,
+        0.018,
+        0.018,
         4,
         10
       ),
-      grilleBottomChrome: createFlushFrontStripGeometry(-0.44, 0.44, 0.484, 0.506, 0.014, 0.012, 14, 2),
-      lowerIntakeMesh: createFlushFrontStripGeometry(-0.56, 0.56, 0.27, 0.4, 0.008, 0.016, 16, 4),
-      fogBezelL: createFlushFrontStripGeometry(0.66, 0.9, 0.295, 0.455, 0.009, 0.014, 8, 5),
-      fogBezelR: createFlushFrontStripGeometry(-0.9, -0.66, 0.295, 0.455, 0.009, 0.014, 8, 5),
-      fogAccentL: createFlushFrontStripGeometry(0.68, 0.86, 0.435, 0.455, 0.014, 0.01, 6, 2),
-      fogAccentR: createFlushFrontStripGeometry(-0.86, -0.68, 0.435, 0.455, 0.014, 0.01, 6, 2),
+      grilleInnerFrameL: createFlushFrontStripGeometry(
+        (v) => grilleOuterU(v) - 0.038,
+        (v) => grilleOuterU(v) - 0.024,
+        0.566,
+        0.890,
+        0.010,
+        0.014,
+        3,
+        8
+      ),
+      grilleInnerFrameR: createFlushFrontStripGeometry(
+        (v) => -(grilleOuterU(v) - 0.024),
+        (v) => -(grilleOuterU(v) - 0.038),
+        0.566,
+        0.890,
+        0.010,
+        0.014,
+        3,
+        8
+      ),
+      grilleBottomChrome: createFlushFrontStripGeometry(-0.408, 0.408, 0.556, 0.574, 0.018, 0.018, 14, 2),
 
-      // Larger, bolder wrap-around LED headlights (u = ±0.53 .. ±1.0, y = 0.745 .. 0.916)
-      hlHousingL: createFlushFrontStripGeometry(0.53, 1.0, 0.745, 0.916, 0.009, 0.018, 14, 6),
-      hlHousingR: createFlushFrontStripGeometry(-1.0, -0.53, 0.745, 0.916, 0.009, 0.018, 14, 6),
-      hlSideWingL: createHeadlightSideWingGeometry(1, 0.745, 0.916, 1.84, 0.007),
-      hlSideWingR: createHeadlightSideWingGeometry(-1, 0.745, 0.916, 1.84, 0.007),
-      hlDrlTopL: createFlushFrontStripGeometry(0.55, 0.99, 0.886, 0.91, 0.015, 0.01, 12, 2),
-      hlDrlTopR: createFlushFrontStripGeometry(-0.99, -0.55, 0.886, 0.91, 0.015, 0.01, 12, 2),
-      hlDrlBotL: createFlushFrontStripGeometry(0.56, 0.84, 0.754, 0.774, 0.014, 0.01, 10, 2),
-      hlDrlBotR: createFlushFrontStripGeometry(-0.84, -0.56, 0.754, 0.774, 0.014, 0.01, 10, 2),
-      hlTurnL: createFlushFrontStripGeometry(0.84, 0.99, 0.785, 0.875, 0.015, 0.01, 6, 3),
-      hlTurnR: createFlushFrontStripGeometry(-0.99, -0.84, 0.785, 0.875, 0.015, 0.01, 6, 3),
+      // Dedicated Molded License Plate Plinth (clean painted bumper band between y=0.352 and y=0.556)
+      frontPlatePlinth: createShapedFrontPatchGeometry({
+        uMin: -0.215,
+        uMax: 0.215,
+        yMin: 0.358,
+        yMax: 0.538,
+        protrude: 0.026,
+        thickness: 0.030,
+        cols: 10,
+        rows: 4,
+      }),
+
+      // Refined Lower Bumper Intake + Aero Fin + Chin Spoiler + Angled Side Air-Curtain Pockets
+      lowerIntakeMesh: createFlushFrontStripGeometry(-0.51, 0.51, 0.252, 0.338, 0.004, 0.016, 16, 4),
+      lowerIntakeTopLip: createFlushFrontStripGeometry(-0.53, 0.53, 0.334, 0.348, 0.016, 0.018, 16, 2),
+      lowerLouver1: createFlushFrontStripGeometry(-0.49, 0.49, 0.288, 0.302, 0.016, 0.016, 16, 2),
+      frontChinSpoiler: createFlushFrontStripGeometry(-0.94, 0.94, 0.208, 0.244, 0.024, 0.036, 24, 3),
+      frontSplitterChrome: createFlushFrontStripGeometry(-0.54, 0.54, 0.230, 0.248, 0.028, 0.014, 16, 2),
+      fogBezelL: createShapedFrontPatchGeometry({
+        uMin: (v) => 0.61 + 0.06 * v,
+        uMax: (v) => 0.87 + 0.05 * v,
+        yMin: 0.275,
+        yMax: 0.465,
+        protrude: 0.004,
+        thickness: 0.016,
+        cols: 8,
+        rows: 5,
+      }),
+      fogBezelR: createShapedFrontPatchGeometry({
+        uMin: (v) => -(0.87 + 0.05 * v),
+        uMax: (v) => -(0.61 + 0.06 * v),
+        yMin: 0.275,
+        yMax: 0.465,
+        protrude: 0.004,
+        thickness: 0.016,
+        cols: 8,
+        rows: 5,
+      }),
+      fogAccentL: createFlushFrontStripGeometry(0.65, 0.92, 0.445, 0.468, 0.021, 0.018, 8, 2),
+      fogAccentR: createFlushFrontStripGeometry(-0.92, -0.65, 0.445, 0.468, 0.021, 0.018, 8, 2),
+      fogAccentVertL: createShapedFrontPatchGeometry({
+        uMin: (v) => 0.605 + 0.055 * v,
+        uMax: (v) => 0.635 + 0.055 * v,
+        yMin: 0.275,
+        yMax: 0.468,
+        protrude: 0.021,
+        thickness: 0.018,
+        cols: 3,
+        rows: 6,
+      }),
+      fogAccentVertR: createShapedFrontPatchGeometry({
+        uMin: (v) => -(0.635 + 0.055 * v),
+        uMax: (v) => -(0.605 + 0.055 * v),
+        yMin: 0.275,
+        yMax: 0.468,
+        protrude: 0.021,
+        thickness: 0.018,
+        cols: 3,
+        rows: 6,
+      }),
+      fogLedBarL: createFlushFrontStripGeometry(0.67, 0.85, 0.352, 0.372, 0.014, 0.012, 8, 2),
+      fogLedBarR: createFlushFrontStripGeometry(-0.85, -0.67, 0.352, 0.372, 0.014, 0.012, 8, 2),
+
+      // Sharp Angular Swept Multi-Crystal LED Headlights flowing from grille brow
+      hlHousingL: createShapedFrontPatchGeometry({
+        uMin: hlInnerU,
+        uMax: 1.0,
+        yMin: (u) => hlBotY(Math.abs(u)),
+        yMax: (u) => browTopY(Math.abs(u)),
+        protrude: 0.006,
+        thickness: 0.018,
+        cols: 16,
+        rows: 6,
+      }),
+      hlHousingR: createShapedFrontPatchGeometry({
+        uMin: -1.0,
+        uMax: (v) => -hlInnerU(v),
+        yMin: (u) => hlBotY(Math.abs(u)),
+        yMax: (u) => browTopY(Math.abs(u)),
+        protrude: 0.006,
+        thickness: 0.018,
+        cols: 16,
+        rows: 6,
+      }),
+      hlSideWingL: createHeadlightSideWingGeometry(1, 0.814, 0.924, 1.84, 0.006),
+      hlSideWingR: createHeadlightSideWingGeometry(-1, 0.814, 0.924, 1.84, 0.006),
+      hlDrlTopL: createShapedFrontPatchGeometry({
+        uMin: 0.554,
+        uMax: 0.994,
+        yMin: (u) => browTopY(Math.abs(u)) - 0.018,
+        yMax: (u) => browTopY(Math.abs(u)),
+        protrude: 0.018,
+        thickness: 0.012,
+        cols: 14,
+        rows: 2,
+      }),
+      hlDrlTopR: createShapedFrontPatchGeometry({
+        uMin: -0.994,
+        uMax: -0.554,
+        yMin: (u) => browTopY(Math.abs(u)) - 0.018,
+        yMax: (u) => browTopY(Math.abs(u)),
+        protrude: 0.018,
+        thickness: 0.012,
+        cols: 14,
+        rows: 2,
+      }),
+      hlDrlInnerL: createShapedFrontPatchGeometry({
+        uMin: (v) => hlInnerU(v) + 0.002,
+        uMax: (v) => hlInnerU(v) + 0.020,
+        yMin: 0.774,
+        yMax: 0.896,
+        protrude: 0.018,
+        thickness: 0.012,
+        cols: 3,
+        rows: 8,
+      }),
+      hlDrlInnerR: createShapedFrontPatchGeometry({
+        uMin: (v) => -(hlInnerU(v) + 0.020),
+        uMax: (v) => -(hlInnerU(v) + 0.002),
+        yMin: 0.774,
+        yMax: 0.896,
+        protrude: 0.018,
+        thickness: 0.012,
+        cols: 3,
+        rows: 8,
+      }),
+      hlDrlBotL: createShapedFrontPatchGeometry({
+        uMin: 0.518,
+        uMax: 0.835,
+        yMin: (u) => hlBotY(Math.abs(u)),
+        yMax: (u) => hlBotY(Math.abs(u)) + 0.016,
+        protrude: 0.017,
+        thickness: 0.012,
+        cols: 12,
+        rows: 2,
+      }),
+      hlDrlBotR: createShapedFrontPatchGeometry({
+        uMin: -0.835,
+        uMax: -0.518,
+        yMin: (u) => hlBotY(Math.abs(u)),
+        yMax: (u) => hlBotY(Math.abs(u)) + 0.016,
+        protrude: 0.017,
+        thickness: 0.012,
+        cols: 12,
+        rows: 2,
+      }),
+      hlCrystal1L: createShapedFrontPatchGeometry({
+        uMin: 0.588,
+        uMax: 0.650,
+        yMin: 0.806,
+        yMax: 0.870,
+        protrude: (s, v) => 0.016 + 0.008 * Math.sin(s * Math.PI) * Math.sin(v * Math.PI),
+        thickness: 0.014,
+        cols: 4,
+        rows: 4,
+      }),
+      hlCrystal2L: createShapedFrontPatchGeometry({
+        uMin: 0.664,
+        uMax: 0.726,
+        yMin: 0.814,
+        yMax: 0.876,
+        protrude: (s, v) => 0.016 + 0.008 * Math.sin(s * Math.PI) * Math.sin(v * Math.PI),
+        thickness: 0.014,
+        cols: 4,
+        rows: 4,
+      }),
+      hlCrystal3L: createShapedFrontPatchGeometry({
+        uMin: 0.740,
+        uMax: 0.802,
+        yMin: 0.822,
+        yMax: 0.882,
+        protrude: (s, v) => 0.016 + 0.008 * Math.sin(s * Math.PI) * Math.sin(v * Math.PI),
+        thickness: 0.014,
+        cols: 4,
+        rows: 4,
+      }),
+      hlCrystal1R: createShapedFrontPatchGeometry({
+        uMin: -0.650,
+        uMax: -0.588,
+        yMin: 0.806,
+        yMax: 0.870,
+        protrude: (s, v) => 0.016 + 0.008 * Math.sin(s * Math.PI) * Math.sin(v * Math.PI),
+        thickness: 0.014,
+        cols: 4,
+        rows: 4,
+      }),
+      hlCrystal2R: createShapedFrontPatchGeometry({
+        uMin: -0.726,
+        uMax: -0.664,
+        yMin: 0.814,
+        yMax: 0.876,
+        protrude: (s, v) => 0.016 + 0.008 * Math.sin(s * Math.PI) * Math.sin(v * Math.PI),
+        thickness: 0.014,
+        cols: 4,
+        rows: 4,
+      }),
+      hlCrystal3R: createShapedFrontPatchGeometry({
+        uMin: -0.802,
+        uMax: -0.740,
+        yMin: 0.822,
+        yMax: 0.882,
+        protrude: (s, v) => 0.016 + 0.008 * Math.sin(s * Math.PI) * Math.sin(v * Math.PI),
+        thickness: 0.014,
+        cols: 4,
+        rows: 4,
+      }),
+      hlCrystalTrayL: createShapedFrontPatchGeometry({
+        uMin: 0.578,
+        uMax: 0.812,
+        yMin: (u) => 0.795 + 0.09 * (Math.abs(u) - 0.578),
+        yMax: (u) => 0.804 + 0.09 * (Math.abs(u) - 0.578),
+        protrude: 0.016,
+        thickness: 0.012,
+        cols: 10,
+        rows: 2,
+      }),
+      hlCrystalTrayR: createShapedFrontPatchGeometry({
+        uMin: -0.812,
+        uMax: -0.578,
+        yMin: (u) => 0.795 + 0.09 * (Math.abs(u) - 0.578),
+        yMax: (u) => 0.804 + 0.09 * (Math.abs(u) - 0.578),
+        protrude: 0.016,
+        thickness: 0.012,
+        cols: 10,
+        rows: 2,
+      }),
+      hlTurnL: createShapedFrontPatchGeometry({
+        uMin: 0.818,
+        uMax: 0.985,
+        yMin: (u) => hlBotY(Math.abs(u)) + 0.014,
+        yMax: (u) => hlBotY(Math.abs(u)) + 0.036,
+        protrude: 0.016,
+        thickness: 0.012,
+        cols: 8,
+        rows: 2,
+      }),
+      hlTurnR: createShapedFrontPatchGeometry({
+        uMin: -0.985,
+        uMax: -0.818,
+        yMin: (u) => hlBotY(Math.abs(u)) + 0.014,
+        yMax: (u) => hlBotY(Math.abs(u)) + 0.036,
+        protrude: 0.016,
+        thickness: 0.012,
+        cols: 8,
+        rows: 2,
+      }),
 
       // ===== RICHLY DECORATED LOWER REAR TAILGATE, BUMPER & TAILLIGHTS =====
       rearPlateBezel: createFlushRearStripGeometry(-0.32, 0.32, 0.74, 0.94, 0.006, 0.014, 12, 4),
@@ -857,7 +1131,7 @@ export function MinivanBody() {
         zMin: 0.206,
         zMax: 0.226,
         yMin: 0.34,
-        yMax: 1.7,
+        yMax: winTopY + 0.005,
         xOffset: -0.026,
         thickness: 0.024,
         rows: 16,
@@ -869,7 +1143,7 @@ export function MinivanBody() {
         zMin: -0.854,
         zMax: -0.834,
         yMin: 0.34,
-        yMax: 1.7,
+        yMax: winTopY + 0.005,
         xOffset: -0.026,
         thickness: 0.024,
         rows: 16,
@@ -880,8 +1154,8 @@ export function MinivanBody() {
         side: 1,
         zMin: -0.848,
         zMax: 0.22,
-        yMin: 1.685,
-        yMax: 1.705,
+        yMin: winTopY - 0.007,
+        yMax: winTopY + 0.007,
         xOffset: -0.024,
         thickness: 0.024,
         rows: 2,
@@ -997,7 +1271,7 @@ export function MinivanBody() {
         cols: 16,
       }),
 
-      // ===== RIGHT SIDE (-X) FULL ENCLOSED SYMMETRIC BODY =====
+      // ===== RIGHT SIDE (-X, AUTHENTIC DRIVER-SIDE DOOR SEAMS, SLIDING DOOR & CENTER RAIL) =====
       rightFrontFender: createCurvedSidePanel({
         side: -1,
         zMin: 1.124,
@@ -1011,23 +1285,91 @@ export function MinivanBody() {
         rows: 16,
         cols: 32,
       }),
-      rightCabinLowerBody: createCurvedSidePanel({
+      rightFrontDoorLower: createCurvedSidePanel({
+        side: -1,
+        zMin: 0.222,
+        zMax: 1.12,
+        yMin: VEHICLE_DIMS.doorBottomY,
+        yMax: frontBeltlineY,
+        thickness: 0.042,
+        characterCrease: true,
+        rows: 14,
+        cols: 16,
+      }),
+      rightSlidingDoorLower: createCurvedSidePanel({
+        side: -1,
+        zMin: rDoorRear,
+        zMax: rDoorFront,
+        yMin: VEHICLE_DIMS.doorBottomY,
+        yMax: beltY + 0.002,
+        thickness: 0.044,
+        characterCrease: true,
+        rows: 16,
+        cols: 16,
+        usePlanTaper: false,
+      }),
+      rightLowerSill: createCurvedSidePanel({
         side: -1,
         zMin: -0.844,
         zMax: 1.12,
-        yMin: VEHICLE_DIMS.sillBottomY,
-        yMax: frontBeltlineY,
-        thickness: 0.045,
-        characterCrease: true,
-        rows: 16,
-        cols: 24,
+        yMin: 0.205,
+        yMax: 0.34,
+        thickness: 0.065,
+        rows: 6,
+        cols: 16,
       }),
-      rightRearQuarterLower: createCurvedSidePanel({
+      // Recessed dark shut-line backing strips so every right-side door gap reads cleanly without light leaks
+      rightSeamFenderDoor: createCurvedSidePanel({
+        side: -1,
+        zMin: 1.114,
+        zMax: 1.13,
+        yMin: 0.21,
+        yMax: frontBeltlineY(1.122),
+        xOffset: -0.016,
+        thickness: 0.032,
+        rows: 10,
+        cols: 2,
+      }),
+      rightSeamBPillar: createCurvedSidePanel({
+        side: -1,
+        zMin: 0.206,
+        zMax: 0.232,
+        yMin: 0.34,
+        yMax: winTopY,
+        xOffset: -0.016,
+        thickness: 0.036,
+        rows: 16,
+        cols: 2,
+      }),
+      rightSeamCPillar: createCurvedSidePanel({
+        side: -1,
+        zMin: -0.852,
+        zMax: -0.826,
+        yMin: 0.34,
+        yMax: winTopY,
+        xOffset: -0.016,
+        thickness: 0.036,
+        rows: 16,
+        cols: 2,
+      }),
+      rightSeamSillHoriz: createCurvedSidePanel({
+        side: -1,
+        zMin: -0.844,
+        zMax: 1.12,
+        yMin: 0.334,
+        yMax: 0.352,
+        xOffset: -0.016,
+        thickness: 0.032,
+        rows: 2,
+        cols: 18,
+      }),
+      // Right Rear Quarter Panel split along matching recessed center slide rail
+      rightRearQuarterBelowRail: createCurvedSidePanel({
         side: -1,
         zMin: -2.18,
         zMax: -0.844,
         yMin: VEHICLE_DIMS.sillBottomY,
-        yMax: 1.155,
+        yMax: DOOR_METRICS.centerRailY - 0.021,
         zMinAtY: (y) => rearCornerZ(y),
         wheelArch: rearArch,
         thickness: 0.045,
@@ -1035,12 +1377,46 @@ export function MinivanBody() {
         rows: 16,
         cols: 30,
       }),
+      rightRearQuarterAboveRail: createCurvedSidePanel({
+        side: -1,
+        zMin: -2.18,
+        zMax: -0.844,
+        yMin: DOOR_METRICS.centerRailY + 0.021,
+        yMax: 1.155,
+        zMinAtY: (y) => rearCornerZ(y),
+        thickness: 0.045,
+        rows: 4,
+        cols: 16,
+      }),
+      rightRearQuarterBehindRail: createCurvedSidePanel({
+        side: -1,
+        zMin: -2.18,
+        zMax: -1.96,
+        yMin: DOOR_METRICS.centerRailY - 0.023,
+        yMax: DOOR_METRICS.centerRailY + 0.023,
+        zMinAtY: (y) => rearCornerZ(y),
+        thickness: 0.045,
+        rows: 3,
+        cols: 6,
+      }),
+      rightCenterRailBacking: createCurvedSidePanel({
+        side: -1,
+        zMin: -1.97,
+        zMax: -0.84,
+        yMin: DOOR_METRICS.centerRailY - 0.022,
+        yMax: DOOR_METRICS.centerRailY + 0.022,
+        xOffset: -0.045,
+        thickness: 0.012,
+        rows: 3,
+        cols: 16,
+        usePlanTaper: false,
+      }),
       rightFrontWindowGlass: createCurvedSidePanel({
         side: -1,
         zMin: 0.322,
         zMax: 1.4,
         yMin: frontBeltlineY,
-        yMax: VEHICLE_DIMS.windowTopY,
+        yMax: winTopY,
         zMinAtY: () => 0.322,
         zMaxAtY: (y) => Math.max(0.35, aPillarZ(y) - 0.068),
         xOffset: -0.008,
@@ -1059,18 +1435,66 @@ export function MinivanBody() {
         rows: 10,
         cols: 2,
       }),
-      rightRearSideGlass: createCurvedSidePanel({
+      rightSlidingWindowGlass: createCurvedSidePanel({
+        side: -1,
+        zMin: rDoorRear + 0.072,
+        zMax: rDoorFront - 0.072,
+        yMin: beltY + 0.004,
+        yMax: winTopY - 0.016,
+        xOffset: -0.008,
+        thickness: 0.014,
+        rows: 12,
+        cols: 12,
+        usePlanTaper: false,
+      }),
+      rightSlidingSashF: createCurvedSidePanel({
+        side: -1,
+        zMin: rDoorFront - 0.075,
+        zMax: rDoorFront,
+        yMin: beltY + 0.002,
+        yMax: winTopY,
+        xOffset: 0.001,
+        thickness: 0.038,
+        rows: 12,
+        cols: 2,
+        usePlanTaper: false,
+      }),
+      rightSlidingSashR: createCurvedSidePanel({
+        side: -1,
+        zMin: rDoorRear,
+        zMax: rDoorRear + 0.075,
+        yMin: beltY + 0.002,
+        yMax: winTopY,
+        xOffset: 0.001,
+        thickness: 0.038,
+        rows: 12,
+        cols: 2,
+        usePlanTaper: false,
+      }),
+      rightSlidingSashT: createCurvedSidePanel({
+        side: -1,
+        zMin: rDoorRear,
+        zMax: rDoorFront,
+        yMin: winTopY - 0.022,
+        yMax: winTopY,
+        xOffset: 0.001,
+        thickness: 0.038,
+        rows: 4,
+        cols: 12,
+        usePlanTaper: false,
+      }),
+      rightRearQuarterGlass: createCurvedSidePanel({
         side: -1,
         zMin: -2.02,
-        zMax: 0.225,
+        zMax: -0.94,
         yMin: 1.154,
-        yMax: VEHICLE_DIMS.windowTopY,
+        yMax: winTopY,
         zMinAtY: (y) => dPillarRearZ(y) + 0.21,
-        zMaxAtY: () => 0.225,
+        zMaxAtY: () => -0.94,
         xOffset: -0.008,
         thickness: 0.012,
         rows: 12,
-        cols: 22,
+        cols: 14,
       }),
       rightBPillarUpper: createCurvedSidePanel({
         side: -1,
@@ -1107,16 +1531,39 @@ export function MinivanBody() {
         rows: 12,
         cols: 4,
       }),
-      rightBeltChrome: createCurvedSidePanel({
+      rightFrontBeltChrome: createCurvedSidePanel({
         side: -1,
-        zMin: -1.96,
+        zMin: 0.224,
         zMax: 1.43,
         yMin: (z) => frontBeltlineY(z) - 0.01,
         yMax: (z) => frontBeltlineY(z) + 0.012,
         xOffset: 0.005,
         thickness: 0.01,
+        rows: 3,
+        cols: 18,
+      }),
+      rightSlidingBeltChrome: createCurvedSidePanel({
+        side: -1,
+        zMin: rDoorRear + 0.004,
+        zMax: rDoorFront - 0.004,
+        yMin: beltY - 0.006,
+        yMax: beltY + 0.014,
+        xOffset: 0.005,
+        thickness: 0.01,
         rows: 2,
-        cols: 28,
+        cols: 12,
+        usePlanTaper: false,
+      }),
+      rightRearBeltChrome: createCurvedSidePanel({
+        side: -1,
+        zMin: -1.96,
+        zMax: -0.844,
+        yMin: 1.144,
+        yMax: 1.164,
+        xOffset: 0.005,
+        thickness: 0.01,
+        rows: 2,
+        cols: 16,
       }),
       rightRockerAeroSkirt: createCurvedSidePanel({
         side: -1,
@@ -1138,8 +1585,8 @@ export function MinivanBody() {
     };
   }, []);
 
-  const frontEmblemPos = useMemo(() => frontFasciaPoint(0, 0.745, 0.022), []);
-  const frontPlatePos = useMemo(() => frontFasciaPoint(0, 0.435, 0.02), []);
+  const frontEmblemPos = useMemo(() => frontFasciaPoint(0, 0.80, 0.024), []);
+  const frontPlatePos = useMemo(() => frontFasciaPoint(0, 0.448, 0.028), []);
   const rearPlatePos = useMemo(() => rearFasciaPoint(0, 0.84, 0.014), []);
   const rearEmblemPos = useMemo(() => rearFasciaPoint(0, 1.095, 0.015), []);
 
@@ -1169,68 +1616,75 @@ export function MinivanBody() {
         <boxGeometry args={[0.5, 0.014, 0.016]} />
       </mesh>
 
-      {/* Modern Compact Honeycomb Mesh + Parametric 3D Stud Front Grille */}
+      {/* Sleek Multi-Tier Wing-Louver Front Grille + Molded Bumper Relief */}
       <mesh geometry={geos.grilleMeshBacking} material={grilleMeshMaterial} />
-      <mesh geometry={geos.grilleStuds} material={satinChromeMaterial} />
+      <mesh geometry={geos.grilleSubFins} material={glossBlackMaterial} />
+      <mesh geometry={geos.grilleInnerFrameL} material={glossBlackMaterial} />
+      <mesh geometry={geos.grilleInnerFrameR} material={glossBlackMaterial} />
+      <mesh geometry={geos.grilleWingBars} material={satinChromeMaterial} />
       <mesh geometry={geos.grilleTopChrome} material={chromeMaterial} />
       <mesh geometry={geos.grilleBorderL} material={satinChromeMaterial} />
       <mesh geometry={geos.grilleBorderR} material={satinChromeMaterial} />
       <mesh geometry={geos.grilleBottomChrome} material={satinChromeMaterial} />
       <mesh geometry={geos.lowerIntakeMesh} material={grilleMeshMaterial} />
+      <mesh geometry={geos.lowerIntakeTopLip} material={glossBlackMaterial} />
+      <mesh geometry={geos.lowerLouver1} material={satinChromeMaterial} />
+      <mesh geometry={geos.frontChinSpoiler} material={glossBlackMaterial} />
+      <mesh geometry={geos.frontSplitterChrome} material={satinChromeMaterial} />
       <mesh geometry={geos.fogBezelL} material={glossBlackMaterial} />
       <mesh geometry={geos.fogBezelR} material={glossBlackMaterial} />
       <mesh geometry={geos.fogAccentL} material={chromeMaterial} />
       <mesh geometry={geos.fogAccentR} material={chromeMaterial} />
+      <mesh geometry={geos.fogAccentVertL} material={chromeMaterial} />
+      <mesh geometry={geos.fogAccentVertR} material={chromeMaterial} />
+      <mesh geometry={geos.fogLedBarL} material={headlightMaterial} />
+      <mesh geometry={geos.fogLedBarR} material={headlightMaterial} />
 
       {/* Center Front Chrome Emblem */}
       <mesh position={frontEmblemPos} rotation={[Math.PI / 2, 0, 0]} material={chromeMaterial}>
-        <cylinderGeometry args={[0.066, 0.07, 0.018, 28]} />
+        <cylinderGeometry args={[0.062, 0.066, 0.018, 28]} />
       </mesh>
       <mesh
         position={[frontEmblemPos.x, frontEmblemPos.y, frontEmblemPos.z + 0.006]}
         rotation={[Math.PI / 2, 0, 0]}
         material={glossBlackMaterial}
       >
-        <cylinderGeometry args={[0.052, 0.052, 0.012, 24]} />
+        <cylinderGeometry args={[0.048, 0.048, 0.012, 24]} />
       </mesh>
 
-      {/* Front Japanese License Plate */}
-      <mesh position={frontPlatePos}>
-        <planeGeometry args={[0.33, 0.165]} />
-        <meshStandardMaterial map={plateTexture} roughness={0.35} />
-      </mesh>
+      {/* Dedicated Molded Bumper Plinth & Front Japanese License Plate (zero grille overlap) */}
+      <mesh geometry={geos.frontPlatePlinth} material={glossBlackMaterial} />
+      <group position={frontPlatePos}>
+        <mesh material={glossBlackMaterial}>
+          <boxGeometry args={[0.338, 0.173, 0.008]} />
+        </mesh>
+        <mesh position={[0, 0, 0.0046]}>
+          <planeGeometry args={[0.33, 0.165]} />
+          <meshStandardMaterial map={plateTexture} roughness={0.35} />
+        </mesh>
+      </group>
 
-      {/* Larger Bold Wrap-Around Multi-Projector LED Headlights & Turn Signals (Left + Right) */}
+      {/* Sharp Angular Swept Multi-Crystal LED Headlights & Sequential Turn Signals */}
       <mesh geometry={geos.hlHousingL} material={glossBlackMaterial} />
       <mesh geometry={geos.hlHousingR} material={glossBlackMaterial} />
       <mesh geometry={geos.hlSideWingL} material={glossBlackMaterial} />
       <mesh geometry={geos.hlSideWingR} material={glossBlackMaterial} />
       <mesh geometry={geos.hlDrlTopL} material={headlightMaterial} />
       <mesh geometry={geos.hlDrlTopR} material={headlightMaterial} />
+      <mesh geometry={geos.hlDrlInnerL} material={headlightMaterial} />
+      <mesh geometry={geos.hlDrlInnerR} material={headlightMaterial} />
       <mesh geometry={geos.hlDrlBotL} material={headlightMaterial} />
       <mesh geometry={geos.hlDrlBotR} material={headlightMaterial} />
+      <mesh geometry={geos.hlCrystalTrayL} material={chromeMaterial} />
+      <mesh geometry={geos.hlCrystalTrayR} material={chromeMaterial} />
+      <mesh geometry={geos.hlCrystal1L} material={headlightMaterial} />
+      <mesh geometry={geos.hlCrystal2L} material={headlightMaterial} />
+      <mesh geometry={geos.hlCrystal3L} material={headlightMaterial} />
+      <mesh geometry={geos.hlCrystal1R} material={headlightMaterial} />
+      <mesh geometry={geos.hlCrystal2R} material={headlightMaterial} />
+      <mesh geometry={geos.hlCrystal3R} material={headlightMaterial} />
       <mesh geometry={geos.hlTurnL} material={hazardMaterial} />
       <mesh geometry={geos.hlTurnR} material={hazardMaterial} />
-      {/* Prominent Twin Recessed LED Projector Lenses per Headlight */}
-      {[1, -1].map((side) =>
-        [0.63, 0.755].map((uVal, pIdx) => {
-          const pos = frontFasciaPoint(side * uVal, 0.835, 0.016);
-          return (
-            <group
-              key={`proj-${side}-${pIdx}`}
-              position={pos}
-              rotation={[0, side * (0.18 + pIdx * 0.16), 0]}
-            >
-              <mesh rotation={[Math.PI / 2, 0, 0]} material={chromeMaterial}>
-                <torusGeometry args={[0.032, 0.0045, 10, 22]} />
-              </mesh>
-              <mesh rotation={[Math.PI / 2, 0, 0]} material={headlightMaterial}>
-                <cylinderGeometry args={[0.027, 0.029, 0.014, 20]} />
-              </mesh>
-            </group>
-          );
-        })
-      )}
 
       {/* ===================== CURVED WINDSHIELD, SEAMLESS HEADER & A-PILLARS ===================== */}
       <mesh geometry={geos.windshield} material={clearGlassMaterial} />
@@ -1323,18 +1777,39 @@ export function MinivanBody() {
         <mesh geometry={geos.flareRL} material={paintMaterial} />
       </group>
 
-      {/* ===================== RIGHT SIDE (-X, FULL ENCLOSED SYMMETRIC BODY) ===================== */}
+      {/* ===================== RIGHT SIDE (-X, AUTHENTIC DRIVER-SIDE DOORS & RAIL) ===================== */}
       <group>
         <mesh geometry={geos.rightFrontFender} material={paintMaterial} castShadow receiveShadow />
-        <mesh geometry={geos.rightCabinLowerBody} material={paintMaterial} castShadow receiveShadow />
-        <mesh geometry={geos.rightRearQuarterLower} material={paintMaterial} castShadow receiveShadow />
+        <mesh geometry={geos.rightFrontDoorLower} material={paintMaterial} castShadow receiveShadow />
+        <mesh geometry={geos.rightSlidingDoorLower} material={paintMaterial} castShadow receiveShadow />
+        <mesh geometry={geos.rightLowerSill} material={paintMaterial} castShadow receiveShadow />
+        <mesh geometry={geos.rightSeamFenderDoor} material={matteRubberMaterial} />
+        <mesh geometry={geos.rightSeamBPillar} material={matteRubberMaterial} />
+        <mesh geometry={geos.rightSeamCPillar} material={matteRubberMaterial} />
+        <mesh geometry={geos.rightSeamSillHoriz} material={matteRubberMaterial} />
+        <mesh geometry={geos.rightRearQuarterBelowRail} material={paintMaterial} castShadow receiveShadow />
+        <mesh geometry={geos.rightRearQuarterAboveRail} material={paintMaterial} castShadow receiveShadow />
+        <mesh geometry={geos.rightRearQuarterBehindRail} material={paintMaterial} castShadow receiveShadow />
+        <mesh geometry={geos.rightCenterRailBacking}>
+          <meshStandardMaterial color="#090d14" metalness={0.55} roughness={0.45} />
+        </mesh>
+        <mesh position={[-(bodySideX(DOOR_METRICS.centerRailY) - 0.025), DOOR_METRICS.centerRailY - 0.014, -1.4]}>
+          <boxGeometry args={[0.022, 0.008, 1.12]} />
+          <meshStandardMaterial color="#94a3b8" metalness={0.86} roughness={0.26} />
+        </mesh>
         <mesh geometry={geos.rightFrontWindowGlass} material={clearGlassMaterial} />
         <mesh geometry={geos.rightQuarterDivider} material={glossBlackMaterial} />
-        <mesh geometry={geos.rightRearSideGlass} material={privacyGlassMaterial} />
+        <mesh geometry={geos.rightSlidingWindowGlass} material={privacyGlassMaterial} />
+        <mesh geometry={geos.rightSlidingSashF} material={glossBlackMaterial} />
+        <mesh geometry={geos.rightSlidingSashR} material={glossBlackMaterial} />
+        <mesh geometry={geos.rightSlidingSashT} material={glossBlackMaterial} />
+        <mesh geometry={geos.rightRearQuarterGlass} material={privacyGlassMaterial} />
         <mesh geometry={geos.rightBPillarUpper} material={glossBlackMaterial} />
         <mesh geometry={geos.rightCPillarUpper} material={glossBlackMaterial} />
         <mesh geometry={geos.rightDPillarUpper} material={glossBlackMaterial} />
-        <mesh geometry={geos.rightBeltChrome} material={chromeMaterial} />
+        <mesh geometry={geos.rightFrontBeltChrome} material={chromeMaterial} />
+        <mesh geometry={geos.rightSlidingBeltChrome} material={chromeMaterial} />
+        <mesh geometry={geos.rightRearBeltChrome} material={chromeMaterial} />
         <mesh geometry={geos.rightRockerAeroSkirt} material={matteRubberMaterial} />
         <mesh geometry={geos.flareFR} material={paintMaterial} />
         <mesh geometry={geos.flareRR} material={paintMaterial} />
@@ -1356,17 +1831,27 @@ export function MinivanBody() {
           </group>
         </group>
 
-        {/* Right Side Chrome Handles */}
-        <mesh
-          position={[-(bodySideX(1.015) + 0.016), 1.015, 0.39]}
-          geometry={geos.handleBar}
-          material={chromeMaterial}
-        />
-        <mesh
-          position={[-(bodySideX(1.015) + 0.016), 1.015, 0.04]}
-          geometry={geos.handleBar}
-          material={chromeMaterial}
-        />
+        {/* Right Side Front Driver Handle + Handle Recess */}
+        <group position={[-(bodySideX(1.015) + 0.002), 1.015, 0.39]}>
+          <mesh position={[0.004, 0, 0]}>
+            <boxGeometry args={[0.012, 0.062, 0.2]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.5} />
+          </mesh>
+          <mesh position={[-0.014, 0, 0]} geometry={geos.handleBar} material={chromeMaterial} castShadow />
+        </group>
+
+        {/* Right Side Sliding Door Chrome Handle + One-Touch Switch + Recess */}
+        <group position={[-(bodySideX(1.015) + 0.002), 1.015, DOOR_METRICS.doorClosedCenterZ + 0.34]}>
+          <mesh position={[0.004, 0, 0]}>
+            <boxGeometry args={[0.012, 0.062, 0.205]} />
+            <meshStandardMaterial color="#0f172a" roughness={0.5} />
+          </mesh>
+          <mesh position={[-0.015, 0, 0]} geometry={geos.handleBar} material={chromeMaterial} castShadow />
+          <mesh position={[-0.016, 0, 0.057]}>
+            <boxGeometry args={[0.028, 0.018, 0.024]} />
+            <meshStandardMaterial color="#111827" roughness={0.55} />
+          </mesh>
+        </group>
       </group>
 
       {/* ===================== SCULPTED REAR TAILGATE, DECORATED BUMPER & TAILLIGHTS ===================== */}
