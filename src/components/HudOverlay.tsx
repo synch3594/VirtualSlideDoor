@@ -35,7 +35,7 @@ const CAMERA_TABS: { id: CameraPreset; label: string }[] = [
 ];
 
 export function HudOverlay() {
-  const [dockTab, setDockTab] = useState<DockTab>('key');
+  const [dockTab, setDockTab] = useState<DockTab>('cockpit');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const layout = useViewportLayout();

@@ -138,7 +138,7 @@ export const useDoorStore = create<DoorStore>((set, get) => ({
   obstaclePlaced: false,
   powerStepEnabled: true,
   showHotspots: true,
-  cameraPreset: 'exterior_front34',
+  cameraPreset: 'exterior_side',
   timeOfDay: 'day',
   bodyColorId: BODY_COLORS[0].id,
   soundProfile: 'electronic',

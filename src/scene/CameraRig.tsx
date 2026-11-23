@@ -67,8 +67,8 @@ export function CameraRig() {
   const userOrbited = useRef(false);
   const lastPreset = useRef<CameraPreset>(cameraPreset);
   const lastOrientationKey = useRef<string>('');
-  const desiredPos = useRef(new THREE.Vector3(...PRESETS.exterior_front34.pos));
-  const desiredTarget = useRef(new THREE.Vector3(...PRESETS.exterior_front34.target));
+  const desiredPos = useRef(new THREE.Vector3(...PRESETS[cameraPreset].pos));
+  const desiredTarget = useRef(new THREE.Vector3(...PRESETS[cameraPreset].target));
 
   // Smoothly interpolated frustum screen-space offset (px) to keep car clear of HUD panels
   const currentOffset = useRef({ x: 0, y: 0 });
