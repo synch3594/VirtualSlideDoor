@@ -30,11 +30,11 @@ export function ParentSettingsModal({ open, onClose }: ParentSettingsModalProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/65 backdrop-blur-sm p-3"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/65 backdrop-blur-sm p-2.5 sm:p-4 safe-top safe-bottom safe-left safe-right"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md max-h-[85dvh] overflow-y-auto bg-slate-900 border border-slate-700 rounded-3xl p-5 shadow-2xl text-slate-100 space-y-5"
+        className="w-full max-w-lg max-h-[88dvh] overflow-y-auto bg-slate-900 border border-slate-700 rounded-3xl p-4 sm:p-5 shadow-2xl text-slate-100 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">

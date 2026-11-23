@@ -27,7 +27,7 @@ export function MinivanScene() {
         toneMappingExposure: 1.05,
         powerPreference: 'high-performance',
       }}
-      camera={{ position: [3.35, 1.38, 2.35], fov: 46, near: 0.08, far: 80 }}
+      camera={{ position: [4.15, 1.52, 2.95], fov: 46, near: 0.08, far: 80 }}
       className="w-full h-full touch-none"
     >
       <SimulationTicker />

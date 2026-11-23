@@ -91,6 +91,7 @@ interface DoorStore {
   soundProfile: SoundProfile;
   volume: number;
   muted: boolean;
+  dockCollapsed: boolean;
   lastEventLabel: string;
 
   // Actions
@@ -112,6 +113,8 @@ interface DoorStore {
   setSoundProfile: (profile: SoundProfile) => void;
   setVolume: (v: number) => void;
   toggleMuted: () => void;
+  setDockCollapsed: (collapsed: boolean) => void;
+  toggleDockCollapsed: () => void;
   beginManualDrag: () => void;
   updateManualDrag: (deltaProgress: number) => void;
   endManualDrag: (releaseVelocity: number) => void;
@@ -141,6 +144,7 @@ export const useDoorStore = create<DoorStore>((set, get) => ({
   soundProfile: 'serena',
   volume: 0.85,
   muted: false,
+  dockCollapsed: false,
   lastEventLabel: '全開',
 
   triggerDoorToggle: (source) => {
@@ -404,6 +408,9 @@ export const useDoorStore = create<DoorStore>((set, get) => ({
     doorAudio.setMuted(next);
     set({ muted: next });
   },
+
+  setDockCollapsed: (collapsed) => set({ dockCollapsed: collapsed }),
+  toggleDockCollapsed: () => set((s) => ({ dockCollapsed: !s.dockCollapsed })),
 
   beginManualDrag: () => {
     doorAudio.unlock();

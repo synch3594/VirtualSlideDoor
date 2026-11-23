@@ -28,6 +28,14 @@
   padding-top: max(0.5rem, env(safe-area-inset-top));
 }
 
+.safe-left {
+  padding-left: max(0.5rem, env(safe-area-inset-left));
+}
+
+.safe-right {
+  padding-right: max(0.5rem, env(safe-area-inset-right));
+}
+
 @keyframes pulse-ring {
   0% {
     transform: scale(0.92);
